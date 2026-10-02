@@ -179,6 +179,24 @@ $SKIN [data-conversation-content] {
   box-shadow: none !important;
 }
 
+/* 侧栏底纹：八芒星菱格（与陪伴栏桌旗同一纹样），浅色半透明，画在卡片背景之上、文字之下。
+ * 卡片自身 z-index 10 形成层叠上下文，::before 用 z-index -1 只会压在卡片背景上，不会盖住列表和按钮。
+ * 上下用遮罩淡出：顶部品牌行、底部油灯和书本处不显示。 */
+$SKIN div:has(> div > [data-slot="sidebar.workspaces"])::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M32 0 L64 32 L32 64 L0 32 Z' fill='none' stroke='%23e6eeff' stroke-width='1' opacity='.35'/%3E%3Cpath d='M32 22 L34.6 29.4 L42 32 L34.6 34.6 L32 42 L29.4 34.6 L22 32 L29.4 29.4 Z' fill='%23eef3ff' opacity='.7'/%3E%3Cg fill='%23eef3ff' opacity='.55'%3E%3Ccircle cx='0' cy='0' r='1.6'/%3E%3Ccircle cx='64' cy='0' r='1.6'/%3E%3Ccircle cx='0' cy='64' r='1.6'/%3E%3Ccircle cx='64' cy='64' r='1.6'/%3E%3C/g%3E%3C/svg%3E") center top / 32px 32px repeat;
+  opacity: .16;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 68%, transparent 90%);
+          mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 68%, transparent 90%);
+}
+$SKIN [data-sidebar-collapsed="true"] div:has(> div > [data-slot="sidebar.workspaces"])::before,
+$SKIN [data-rightbar-fullscreen="true"] div:has(> div > [data-slot="sidebar.workspaces"])::before { display: none; }
+
 /* 面板四角星饰（侧栏与对话框共用）。提供 skin.cornerStar 素材时自动替换。 */
 $SKIN div[data-phase]:has(> [data-conversation-content])::after,
 $SKIN div:has(> div > [data-slot="sidebar.workspaces"])::after {
