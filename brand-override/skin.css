@@ -30,10 +30,15 @@ body[data-dsh-anime-skin="active"]::before {
   z-index: 0;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(180deg, #0c1c3948 0%, #10234124 48%, #0c1c3952 100%), var(--dsh-anime-workspace-background-src);
-  background-position: center, center;
-  background-size: cover, cover;
-  background-repeat: no-repeat, no-repeat;
+  /* 通透的白天光感（参照效果图）：不再压暗，改为右上窗户方向的柔和天光 + 极淡的白雾，并整体提亮。 */
+  background-image:
+    radial-gradient(ellipse 70% 60% at 62% 18%, #fffaf04d 0%, #fffaf000 70%),
+    linear-gradient(180deg, #ffffff1f 0%, #f2f7ff14 55%, #0c1c3914 100%),
+    var(--dsh-anime-workspace-background-src);
+  background-position: center, center, center;
+  background-size: cover, cover, cover;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  filter: brightness(1.12) saturate(1.06);
 }
 body[data-dsh-anime-skin-stage="background-only"] > :not(style):not(script) { visibility: hidden !important; }
 
