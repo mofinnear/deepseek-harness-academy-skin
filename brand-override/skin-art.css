@@ -200,12 +200,18 @@ $SKIN [data-composer-card]::after {
  * 气泡和表情栏叠在桌面上。宽度不够时按高度铺满，取左侧（笔和书）那一段。 */
 .dsh-academy-desk {
   position: absolute;
-  top: 63vh;
-  right: 0;
+  top: calc(63vh - 387px);
   bottom: 0;
-  left: -6px;
+  left: -55px;
+  width: 460px;
   display: block;
-  background: var(--dsh-academy-desk-src) 18% top / cover no-repeat;
+  /* desk-v3.png（1200×1600，三分之四侧视角）：桌角立柱在左下（x≈14%），桌面在约 66% 高度，
+   * 书、墨水瓶、百合堆在右后方。宽 460px 时桌面落在 63vh+18px，正好垫在角色前臂下面；
+   * 立柱落在陪伴栏左边缘内 10px，右后方的物件一部分被角色头发挡住、一部分伸出窗口右边。
+   * 图片下端从 500px 起渐隐成深蓝阴影并补满到底部（大部分被气泡和表情按钮盖住），不留生硬的截断线。 */
+  background:
+    linear-gradient(180deg, #0e132400 0px, #0e1324e6 80px, #0e1324 110px) left 55px top 500px / calc(100% - 55px) calc(100% - 500px) no-repeat, /* 从陪伴栏左边缘开始，不压到对话框 */
+    var(--dsh-academy-desk-src) left top / 460px auto no-repeat;
   filter: drop-shadow(0 -4px 10px #0b1a3355);
 }
 /* 角色在桌子前面：前臂压在桌面后沿往下约 34px。立绘下沿本身画了手臂轮廓（不是硬截断），
@@ -267,30 +273,31 @@ body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-props] { dis
 /* @end */
 
 /* @art bubbleFrame */
-/* 气泡边框：九宫格（原图裁成 740×268，四角花饰在 85px 以内），米白底由图本身填充。 */
+/* 华丽气泡边框 bubble-frame-ornate.png（裁成 1539×715）：外侧金线距上 86、下 88、左 8、右 11；
+ * 四角卷草花饰范围 左上 210×272、右下 120×200。按 0.16 缩放：
+ * 切片 272 120 200 210 → 显示宽度 44 19 32 34px，外扩 14 2 14 1px 让金线落在气泡边缘。 */
 .dsh-academy-bubble {
-  left: 34px; /* 左侧留出尖角的位置 */
+  left: 40px; /* 左侧留出尖角的位置 */
   border: 0;
   border-radius: 0;
   background: none;
   box-shadow: none;
-  border-image: var(--dsh-academy-bubble-frame-src) 85 85 85 85 fill / 34px stretch;
-  border-image-outset: 4px;
+  border-image: var(--dsh-academy-bubble-frame-src) 272 120 200 210 fill / 44px 19px 32px 34px / 14px 2px 14px 1px stretch;
   filter: drop-shadow(0 8px 16px #0b1a3366);
 }
 /* @end */
 
 /* @art bubbleTail */
-/* 气泡尖角：照效果图放在气泡左侧中间、尖端朝左（指向对话框）。
- * 原图尖端朝上，逆时针转 90°；转完后底边压在气泡左边的金线上。 */
+/* 朝左的尖角 bubble-tail-left.png（240×240，根部在图片右边缘、上下居中）。
+ * 按 0.22 缩放成 53px，右边缘伸进气泡 6px，盖住那一段左侧金线。 */
 .dsh-academy-bubble::after {
   top: 50%;
-  left: -31px;
-  width: 34px;
-  height: 24px;
-  transform: translateY(-50%) rotate(-90deg);
+  left: -47px;
+  width: 53px;
+  height: 53px;
+  transform: translateY(-50%);
   border: 0;
-  background: var(--dsh-academy-bubble-tail-src) center bottom / contain no-repeat;
+  background: var(--dsh-academy-bubble-tail-src) center / contain no-repeat;
 }
 /* @end */
 

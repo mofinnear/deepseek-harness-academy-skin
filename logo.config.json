@@ -122,16 +122,16 @@
         "webp": true
       },
       "desk": {
-        "source": "assets/ui/desk.png",
+        "source": "assets/ui/desk-v3.png",
         "maxPx": 1000,
         "webp": true
       },
       "bubbleFrame": {
-        "source": "assets/ui/bubble-frame.png",
+        "source": "assets/ui/bubble-frame-ornate.png",
         "maxPx": null
       },
       "bubbleTail": {
-        "source": "assets/ui/bubble-tail.png",
+        "source": "assets/ui/bubble-tail-left.png",
         "maxPx": null
       },
       "sidebarLamp": {
@@ -142,16 +142,6 @@
       "hangingNotes": {
         "source": "assets/ui/hanging-notes.png",
         "maxPx": 600,
-        "webp": true
-      },
-      "deskBooks": {
-        "source": "assets/ui/desk-books.png",
-        "maxPx": 360,
-        "webp": true
-      },
-      "deskGlobe": {
-        "source": "assets/ui/desk-globe.png",
-        "maxPx": 360,
         "webp": true
       }
     }
