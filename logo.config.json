@@ -122,8 +122,8 @@
         "webp": true
       },
       "desk": {
-        "source": "assets/ui/desk-v3.png",
-        "maxPx": 1000,
+        "source": "assets/ui/desk-v4.png",
+        "maxPx": 1100,
         "webp": true
       },
       "bubbleFrame": {

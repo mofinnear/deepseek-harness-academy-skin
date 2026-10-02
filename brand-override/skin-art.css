@@ -196,32 +196,34 @@ $SKIN [data-composer-card]::after {
 /* @end */
 
 /* @art desk */
-/* 桌子：图片顶边就是桌面后沿（构建前已裁掉上方透明区）。角色前臂搭在后沿上，
- * 气泡和表情栏叠在桌面上。宽度不够时按高度铺满，取左侧（笔和书）那一段。 */
+/* 书桌 desk-v4.png（1200×1800）：GPT 先画「角色 + 书桌」合成图，再去掉角色单独画出书桌，
+ * 所以它的前 1312 行与立绘（1199×1312）逐像素对应：桌面后沿在 y≈1142，立绘前臂（到 y≈1297）正好压在桌面上。
+ * 原图偏暗，已提亮暗部、略偏冷，接近书院场景图的清亮质感（原图保留为 desk-v4-original.png）。
+ *
+ * 对齐方法：立绘和书桌都按同一个高度 --dsh-ch-h 缩放、同一个水平中心定位，
+ * 立绘不再受陪伴栏宽度限制（宽度由高度算出），这样任何窗口尺寸下两者都严格对齐。
+ * 书桌画在铺满陪伴栏的元素背景上，只在陪伴栏范围内显示，不会压到左边的对话框。 */
+$SKIN [data-dsh-academy-rail] {
+  --dsh-ch-h: calc(63vh - 70px);                                   /* 立绘显示高度 */
+  --dsh-ch-w: calc(var(--dsh-ch-h) * 0.9139);                      /* 1199 / 1312 */
+  --dsh-ch-x: calc(-64px + (var(--dsh-rail-w) + 70px) / 2 - var(--dsh-ch-w) / 2);
+  --dsh-desk-h: calc(var(--dsh-ch-h) * 1.372);                     /* 1800 / 1312 */
+}
 .dsh-academy-desk {
   position: absolute;
-  top: calc(63vh - 387px);
-  bottom: 0;
-  left: -55px;
-  width: 460px;
+  inset: 0;
   display: block;
-  /* desk-v3.png（1200×1600，三分之四侧视角）：桌角立柱在左下（x≈14%），桌面在约 66% 高度，
-   * 书、墨水瓶、百合堆在右后方。宽 460px 时桌面落在 63vh+18px，正好垫在角色前臂下面；
-   * 立柱落在陪伴栏左边缘内 10px，右后方的物件一部分被角色头发挡住、一部分伸出窗口右边。
-   * 图片下端从 500px 起渐隐成深蓝阴影并补满到底部（大部分被气泡和表情按钮盖住），不留生硬的截断线。 */
   background:
-    linear-gradient(180deg, #0e132400 0px, #0e1324e6 80px, #0e1324 110px) left 55px top 500px / calc(100% - 55px) calc(100% - 500px) no-repeat, /* 从陪伴栏左边缘开始，不压到对话框 */
-    var(--dsh-academy-desk-src) left top / 460px auto no-repeat;
-  filter: drop-shadow(0 -4px 10px #0b1a3355);
+    linear-gradient(180deg, #716773 0px, #2a2433 140px) left 0 top calc(104px + var(--dsh-desk-h) - 2px) / 100% 100% no-repeat,
+    var(--dsh-academy-desk-src) left var(--dsh-ch-x) top 104px / var(--dsh-ch-w) var(--dsh-desk-h) no-repeat;
 }
-/* 角色在桌子前面：前臂压在桌面后沿往下约 34px。立绘下沿本身画了手臂轮廓（不是硬截断），
- * 不要加渐隐遮罩，否则手指和袖口会变成半透明。 */
+/* 角色在桌子前面：立绘下沿本身画了手臂轮廓（不是硬截断），不要加渐隐遮罩，否则手指和袖口会变成半透明。 */
 $SKIN .dsh-academy-character {
   top: 104px;
   bottom: auto;
-  left: -64px;
-  width: calc(100% + 70px);
-  height: calc(63vh - 104px + 34px);
+  left: var(--dsh-ch-x);
+  width: var(--dsh-ch-w);
+  height: var(--dsh-ch-h);
 }
 $SKIN .dsh-academy-bubble { bottom: 132px; }
 /* @end */
