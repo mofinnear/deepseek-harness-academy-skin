@@ -1,0 +1,172 @@
+{
+  "$comment": [
+    "DSH logo override manifest. Point each artwork at a file in ./assets/ and run",
+    "`node tools/build.mjs` — it regenerates brand-override/generated/fonts.js,",
+    "brand-override/generated/artwork.js and every generated/artwork/<slot>/ shadow file.",
+    "Raster sources (.png/.jpg/.webp) are inlined as data URIs; .svg sources are copied",
+    "as-is so their gradients, filters and internal ids keep working."
+  ],
+  "artworks": {
+    "sidebarMark": {
+      "label": "Sidebar mark (expanded + collapsed rail)",
+      "source": "assets/sidebar-mark.png",
+      "fit": "img",
+      "maxPx": 96,
+      "aspect": "auto"
+    },
+    "sidebarName": {
+      "label": "Sidebar wordmark (text next to the mark)",
+      "source": null,
+      "fit": "mask",
+      "maxPx": 168,
+      "aspect": "auto"
+    },
+    "heroMark": {
+      "label": "Conversation hero mark (new-chat watermark)",
+      "source": "assets/hero-mark.png",
+      "fit": "img",
+      "maxPx": 136,
+      "aspect": "auto"
+    }
+  },
+  "skin": {
+    "$comment": [
+      "Right-rail and ornament art. Optional entries (source: null) fall back to the built-in look:",
+      "expressions[].source  full transparent portrait shown when that expression is picked (falls back to mascot)",
+      "expressions[].thumb   square transparent head crop for the picker button (falls back to a zoomed portrait)",
+      "memo.source           transparent sticky-note PNG (falls back to the CSS paper note)",
+      "cornerStar.source     transparent four-point star used on panel corners (falls back to the inline SVG star)"
+    ],
+    "mascot": {
+      "source": "assets/academy-maid-pensive.png",
+      "maxPx": 768,
+      "webp": true
+    },
+    "workspaceBackground": {
+      "source": "assets/academy-panorama.jpg"
+    },
+    "sidebarBackground": {
+      "source": "assets/academy-sidebar.jpg"
+    },
+    "expressions": [
+      {
+        "label": "默认",
+        "source": null,
+        "thumb": "assets/expressions/expr-default-thumb.png",
+        "maxPx": 768,
+        "message": "有什么问题都可以问我哦！\n我会一直在这里！",
+        "webp": true
+      },
+      {
+        "label": "开心",
+        "source": "assets/expressions/expr-happy.png",
+        "thumb": "assets/expressions/expr-happy-thumb.png",
+        "maxPx": 768,
+        "message": "太好啦！\n我们一起把它做完吧！",
+        "webp": true
+      },
+      {
+        "label": "好奇",
+        "source": "assets/expressions/expr-curious.png",
+        "thumb": "assets/expressions/expr-curious-thumb.png",
+        "maxPx": 768,
+        "message": "嗯？这个问题很有意思，\n让我想想～",
+        "webp": true
+      },
+      {
+        "label": "眨眼",
+        "source": "assets/expressions/expr-wink.png",
+        "thumb": "assets/expressions/expr-wink-thumb.png",
+        "maxPx": 768,
+        "message": "交给我吧！\n有我在就放心～",
+        "webp": true
+      }
+    ],
+    "memo": {
+      "source": null,
+      "maxPx": 320
+    },
+    "cornerStar": {
+      "source": null,
+      "maxPx": 96
+    },
+    "art": {
+      "$comment": "GPT-generated decor (docs/gpt-素材提示词.md). Frames are nine-slice: keep maxPx null so the slice numbers in skin-art.css stay valid.",
+      "panelFrame": {
+        "source": "assets/ui/panel-frame.png",
+        "maxPx": null
+      },
+      "panelFillMask": {
+        "source": "assets/ui/panel-fill-mask.png",
+        "maxPx": null
+      },
+      "sidebarFrame": {
+        "source": "assets/ui/sidebar-frame.png",
+        "maxPx": null
+      },
+      "composerFrame": {
+        "source": "assets/ui/composer-frame-v2.png",
+        "maxPx": null
+      },
+      "starLarge": {
+        "source": "assets/ui/star-large.png",
+        "maxPx": 128
+      },
+      "starSparkles": {
+        "source": "assets/ui/star-sparkles.png",
+        "maxPx": 256
+      },
+      "sidebarProps": {
+        "source": "assets/ui/sidebar-props.png",
+        "maxPx": 768,
+        "webp": true
+      },
+      "desk": {
+        "source": "assets/ui/desk.png",
+        "maxPx": 1000,
+        "webp": true
+      },
+      "bubbleFrame": {
+        "source": "assets/ui/bubble-frame.png",
+        "maxPx": null
+      },
+      "bubbleTail": {
+        "source": "assets/ui/bubble-tail.png",
+        "maxPx": null
+      },
+      "sidebarLamp": {
+        "source": "assets/ui/sidebar-lamp.png",
+        "maxPx": 360,
+        "webp": true
+      },
+      "hangingNotes": {
+        "source": "assets/ui/hanging-notes.png",
+        "maxPx": 600,
+        "webp": true
+      },
+      "deskBooks": {
+        "source": "assets/ui/desk-books.png",
+        "maxPx": 360,
+        "webp": true
+      },
+      "deskGlobe": {
+        "source": "assets/ui/desk-globe.png",
+        "maxPx": 360,
+        "webp": true
+      }
+    }
+  },
+  "maxBundleBytes": 6000000,
+  "text": {
+    "$comment": [
+      "Optional: set useCustomText to true to render a text wordmark instead of",
+      "sidebarName artwork. `family` accepts a CSS font stack; leave null to inherit",
+      "the harness brand font."
+    ],
+    "useCustomText": true,
+    "value": "DeepSeek Harness",
+    "family": null,
+    "weight": 600,
+    "letterSpacing": "0.01em"
+  }
+}

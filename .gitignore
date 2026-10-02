@@ -1,0 +1,17 @@
+# 本机备份与构建产物（体积大、可重新生成）
+/backup/
+/build/
+/brand-override/dist/
+# 构建时自动生成的缩放缓存
+*.max*.png
+*.max*.webp
+# 中间稿与未采用的候选图
+/assets/generated-ui/
+/assets/ui/exec-*.png
+/assets/ui/composer-frame-noline.png
+/assets/ui/composer-frame-gold.png
+/assets/ui/composer-frame-hd.png
+/assets/ui/composer-frame.png
+# 系统文件
+.DS_Store
+._*

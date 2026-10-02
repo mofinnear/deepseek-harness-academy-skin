@@ -1,0 +1,602 @@
+/*
+ * 星海书院皮肤样式。tools/build.mjs 会把它内联进 dist/client.js。
+ *
+ * `$SKIN` 在构建时展开为 `html body[data-dsh-anime-skin="active"]`，
+ * 多出的 `html` 让规则稳压 Harness 自带样式。
+ *
+ * 选择器尽量依赖 Harness 的 data-slot / data-* 属性而不是哈希类名，
+ * 这样应用更新后不容易失效：
+ *   侧栏卡片  div:has(> div > [data-slot="sidebar.workspaces"])
+ *   对话面板  div[data-phase]:has(> [data-conversation-content])
+ *   对话列    div:has(> [data-slot="main"])
+ *   输入框    [data-composer-card]
+ *
+ * 层级：全景背景 0 < 对话列 1 < 侧栏 10 < 右侧陪伴栏 12 < 原生顶栏按钮区 15 < 原生弹出菜单层 20。
+ * 对话列和陪伴栏必须低于 15/20，否则会盖住侧栏收起后的「打开侧边栏」按钮和模型选择等菜单。
+ */
+
+$SKIN {
+  --dsh-rail-w: min(330px, 27vw);
+  --dsh-academy-gold: #d9b56d;
+  --dsh-academy-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fff6d6'/%3E%3Cstop offset='.5' stop-color='%23e7bd62'/%3E%3Cstop offset='1' stop-color='%23b8862f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 C21.5 13 27 18.5 40 20 C27 21.5 21.5 27 20 40 C18.5 27 13 21.5 0 20 C13 18.5 18.5 13 20 0Z' fill='url(%23g)' stroke='%23fff8e0' stroke-width='.8'/%3E%3C/svg%3E");
+  color-scheme: light;
+  background: transparent !important;
+}
+
+/* ---------- 1. 全窗口背景 ---------- */
+body[data-dsh-anime-skin="active"]::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(180deg, #0c1c3948 0%, #10234124 48%, #0c1c3952 100%), var(--dsh-anime-workspace-background-src);
+  background-position: center, center;
+  background-size: cover, cover;
+  background-repeat: no-repeat, no-repeat;
+}
+body[data-dsh-anime-skin-stage="background-only"] > :not(style):not(script) { visibility: hidden !important; }
+
+/* ---------- 2. 左侧栏：悬浮圆角卡片 ---------- */
+$SKIN div:has(> div > [data-slot="sidebar.workspaces"]) {
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box !important;
+  height: calc(100% - 28px) !important;
+  margin: 14px 0 14px 14px !important;
+  overflow: visible !important;
+  border: 1.5px solid var(--dsh-academy-gold) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, #0d245b88 0%, #0d245b55 58%, #081a36a8 100%), var(--dsh-anime-sidebar-background-src) center / cover no-repeat !important;
+  background-clip: padding-box !important;
+  box-shadow: 0 0 0 4px #ffffff1f, 0 18px 40px #050f2466 !important;
+  --dsw-alias-label-primary: #f5f8ff;
+  --dsw-alias-label-primary-bluish: #edf4ff;
+  --dsw-alias-label-secondary: #cbdaf3;
+  --dsw-alias-label-tertiary: #9aafd2;
+  --dsw-alias-label-caption: #93a8ce;
+  --dsw-alias-brand-primary: #a8cbff;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #a8cbff;
+  --dsw-alias-brand-primary-invert: #142c54;
+  --dsw-alias-brand-text: #f8faff;
+  --dsw-alias-border-l1: #ffffff12;
+  --dsw-alias-border-l2: #ffffff20;
+  --dsw-alias-border-l3: #ffffff2b;
+  --dsw-alias-border-l4: #b8c9e64a;
+  --dsw-alias-interactive-bg-hover: #ffffff12;
+  --dsw-alias-interactive-bg-active: #ffffff1d;
+  --dsw-specific-sidebar-fill: #152e58;
+  --dsw-specific-sidebar-nav-item-active: #274875;
+  --dsw-specific-sidebar-nav-item-hover: #1d3b69;
+}
+
+/* 侧栏收起时 Harness 把这一列宽度设为 0，并把「打开侧边栏」移到顶栏左侧；卡片样式必须撤掉 */
+$SKIN [data-sidebar-collapsed="true"] div:has(> div > [data-slot="sidebar.workspaces"]) {
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+$SKIN [data-sidebar-collapsed="true"] div:has(> div > [data-slot="sidebar.workspaces"])::after { display: none; }
+
+/* 侧栏这一列原生自带 40% 深蓝底 + 渐变，卡片四周会露出一圈和全景背景不同的色带 */
+$SKIN [class*="_sidebarCol"] { background: transparent !important; }
+/* 卡片原生宽度 = 整列 280px，再加 14px 左边距就超出列宽、右侧金边被列的 overflow: hidden 切掉。
+ * 卡片收窄到列内（左 14、右 7），展开时让边框花饰可以伸出列外；收起时保持裁切，避免收起动画露馅。 */
+$SKIN [class*="_frame"]:not([data-sidebar-collapsed="true"]) [class*="_sidebarCol"] { overflow: visible !important; }
+$SKIN [class*="_frame"]:not([data-sidebar-collapsed="true"]) div:has(> div > [data-slot="sidebar.workspaces"]) { width: calc(100% - 21px) !important; }
+
+/* 品牌：圆形头像 + 大号 DeepSeek 字标 */
+$SKIN div:has(> span > span > span > [data-slot="sidebar.brand.mark"]),
+$SKIN span:has(> span > span > [data-slot="sidebar.brand.mark"]) { overflow: visible !important; }
+$SKIN span:has(> [data-slot="sidebar.brand.mark"]) {
+  display: flex;
+  flex: 0 0 48px !important;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 48px !important;
+  height: 48px !important;
+  margin-top: -12px;
+  overflow: hidden;
+  border: 2px solid #a9cbff;
+  border-radius: 50% !important;
+  corner-shape: round !important;
+  background: #eef4ff;
+  box-shadow: 0 0 0 3px #ffffff1f, 0 4px 10px #0008;
+}
+$SKIN span:has(> [data-slot="sidebar.brand.mark"]) img { width: 70px !important; height: 70px !important; max-width: none !important; margin-top: -2px; }
+$SKIN span:has(> [data-slot="sidebar.brand.name"]) { margin-left: 6px; }
+$SKIN [data-dsh-logo-wordmark="text"] { font-size: 0 !important; }
+$SKIN [data-dsh-logo-wordmark="text"]::after { content: "DeepSeek"; font-size: 24px; font-weight: 700; line-height: 24px; }
+
+/* 新建对话 / 最近对话 */
+$SKIN [data-dsh-academy-new-chat] {
+  box-sizing: border-box !important;
+  width: calc(100% - 48px) !important;
+  min-height: 40px !important;
+  margin: 10px 24px 14px !important;
+  border: 1px solid #75b1ff !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  background: linear-gradient(180deg, #3989f5, #236dde) !important;
+  box-shadow: inset 0 1px 0 #ffffff45, 0 4px 12px #071d414d !important;
+}
+$SKIN [data-dsh-academy-recent-heading] { color: #f7f9ff !important; font-weight: 700 !important; }
+$SKIN [data-dsh-academy-plugin-link] { display: none !important; }
+
+/* 会话列表：隐藏工作区分组行，保留真实会话 */
+$SKIN [role="treeitem"][data-row-key^="workspace:"] { display: none !important; }
+$SKIN [role="treeitem"][data-row-key^="session:"] {
+  min-height: 52px;
+  margin: 4px 6px;
+  padding-left: 12px !important;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+$SKIN [role="treeitem"][data-row-key^="session:"]::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  opacity: .92;
+  background: #e8f0ff;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z'/%3E%3Cpath d='M8.5 9.5h.01M12 9.5h.01M15.5 9.5h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+$SKIN [role="treeitem"][data-row-key^="session:"]:hover { background: #ffffff14; }
+$SKIN [role="treeitem"][data-row-key^="session:"][aria-selected="true"] {
+  border-color: #65b5ff !important;
+  background: linear-gradient(180deg, #2b5288, #213f6c) !important;
+  box-shadow: inset 0 0 0 1px #ffffff14, 0 4px 12px #06142e55 !important;
+}
+
+/* ---------- 3. 中间对话框：整列（含顶栏）做成金边面板 ---------- */
+$SKIN div:has(> [data-slot="main"]) {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box !important;
+  padding: 14px calc(var(--dsh-rail-w) + 6px) 14px 14px !important;
+  background: transparent !important;
+}
+$SKIN div[data-phase]:has(> [data-conversation-content]) {
+  position: relative;
+  overflow: visible !important;
+  border: 1.5px solid var(--dsh-academy-gold);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7fff0 100%) !important;
+  box-shadow: 0 0 0 4px #ffffff8c, 0 18px 40px #0b1d3d40;
+}
+$SKIN [data-conversation-content] {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 面板四角星饰（侧栏与对话框共用）。提供 skin.cornerStar 素材时自动替换。 */
+$SKIN div[data-phase]:has(> [data-conversation-content])::after,
+$SKIN div:has(> div > [data-slot="sidebar.workspaces"])::after {
+  content: "";
+  position: absolute;
+  z-index: 30;
+  inset: -15px;
+  pointer-events: none;
+  background:
+    var(--dsh-academy-star) left top / 30px no-repeat,
+    var(--dsh-academy-star) right top / 30px no-repeat,
+    var(--dsh-academy-star) left bottom / 30px no-repeat,
+    var(--dsh-academy-star) right bottom / 30px no-repeat;
+  filter: drop-shadow(0 0 4px #fff5d0aa);
+}
+
+/* 新会话首页「预览版」徽标：皮肤把文字色改成深蓝后会和深色底融在一起 */
+$SKIN [class*="previewBadge"] { color: #f4f7ff !important; }
+
+/* 对话头像：DeepSeek 在每轮回复第一行左侧，用户在自己的气泡右侧。
+ * 用户头像取账号头像（client.js 写入 --dsh-academy-user-avatar），取不到时用人形图标。 */
+$SKIN [data-chat-flow-kind] { position: relative; }
+$SKIN [data-chat-flow-kind="assistant-step"],
+$SKIN [data-chat-flow-kind="turn-process"],
+$SKIN [data-chat-flow-kind="turn-tail"] { padding-left: 54px; box-sizing: border-box; }
+$SKIN [data-chat-flow-kind="user"] { padding-right: 54px; box-sizing: border-box; }
+$SKIN [data-chat-flow-kind="user"] + :not([data-chat-flow-kind="user"])::before,
+$SKIN [data-chat-flow-kind="user"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  border: 2px solid #a9cbff;
+  border-radius: 50%;
+  corner-shape: round;
+  box-shadow: 0 0 0 2px #ffffffcc, 0 4px 10px #1b396533;
+  pointer-events: none;
+}
+$SKIN [data-chat-flow-kind="user"] + :not([data-chat-flow-kind="user"])::before {
+  left: 0;
+  background: #eef4ff var(--dsh-logo-mark-src) 50% 8% / 150% auto no-repeat;
+}
+$SKIN [data-chat-flow-kind="user"]::after {
+  right: 0;
+  background: var(--dsh-academy-user-avatar, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23e3eeff'/%3E%3Ccircle cx='20' cy='15.5' r='6.5' fill='%23397fe4'/%3E%3Cpath d='M8.5 32c1.6-6.2 6.2-9.5 11.5-9.5s9.9 3.3 11.5 9.5' fill='%23397fe4'/%3E%3C/svg%3E")) center / cover no-repeat, #e3eeff;
+}
+
+/* 弹出菜单（账号、访问模式、模型、指令等）：原生是 58% 透明的毛玻璃，压在深蓝侧栏上会发灰。
+ * 改成不透明的浅色底 + 淡金描边。 */
+$SKIN [data-menu-material] > [class*="material"] {
+  background: #fbfdff !important;
+  box-shadow: inset 0 0 0 1px #d9b56d80;
+}
+$SKIN [data-menu-material] { box-shadow: 0 10px 28px #0b1d3d40; }
+
+/* 「加载更早」与「回到底部」：浅蓝胶囊 / 圆钮 + 淡金描边 */
+$SKIN [class*="_older"] button {
+  padding: 4px 16px !important;
+  border: 1px solid #d9b56d99 !important;
+  border-radius: 999px !important;
+  color: #27446f !important;
+  background: linear-gradient(180deg, #ffffff, #eaf2ff) !important;
+  box-shadow: 0 2px 8px #1b39651a;
+}
+$SKIN [class*="_older"] button:hover { border-color: #d9b56d !important; color: #17305a !important; }
+
+/* 对话滚动条：原生贴着面板右边缘、一直伸进下面的花边。改细、收进金框内线，上下留空避开四角。 */
+$SKIN [data-conversation-scroll] { margin-right: 8px; }
+$SKIN [data-conversation-scroll]::-webkit-scrollbar { width: 6px; }
+$SKIN [data-conversation-scroll]::-webkit-scrollbar-track { margin: 12px 0 56px; background: transparent; }
+$SKIN [data-conversation-scroll]::-webkit-scrollbar-thumb { border-radius: 3px; background: #9fb6d94d; }
+$SKIN [data-conversation-scroll]::-webkit-scrollbar-thumb:hover { background: #7f9cc880; }
+
+/* 设置等弹窗：原生面板 87% 半透明，后面的对话会透出来；左侧导航借用侧栏的颜色变量，
+ * 而皮肤把它们设成了深蓝（给深色侧栏用），在浅色弹窗里就成了深底深字。 */
+$SKIN [role="dialog"] {
+  --dsw-specific-sidebar-nav-item-active: #dce9ff;
+  --dsw-specific-sidebar-nav-item-hover: #ebf2ff;
+  --dsw-specific-sidebar-nav-item-active-accent: #397fe4;
+  background: #f6f9ff !important;
+  border: 1px solid #d9b56d80;
+  box-shadow: 0 24px 60px #0b1d3d55 !important;
+}
+$SKIN [role="dialog"] [aria-current="true"] { border: 0 !important; color: #17305a !important; box-shadow: none !important; }
+/* 弹窗后面加一层淡淡的遮罩，与界面拉开层次 */
+$SKIN :has(> [role="dialog"]) { background: #0b1d3d33; }
+
+/* ---------- 4. 底部输入框 ---------- */
+/* 输入框所在区域：消息会滚到它下面，需要一层渐变底挡住，否则文字从输入框下方透出来 */
+/* 只铺在中间：左右各让出 45px 避开对话框下面两个角的卷边花饰，底部只让 4px（再多消息会从状态栏下透出） */
+$SKIN [data-composer-seat] { background: linear-gradient(180deg, #f2f7ff00 0%, #f2f7fff5 30%, #f2f7ff 100%) center top / calc(100% - 90px) calc(100% - 4px) no-repeat !important; }
+$SKIN [data-composer-card] {
+  position: relative !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 6px 10px 8px !important;
+  overflow: visible !important;
+  border: 1.5px solid #c9d9f2 !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px #ffffffb0, 0 0 0 5px #d9b56d88, 0 10px 26px #1b39652a !important;
+}
+$SKIN [data-composer-card]:focus-within { outline: none !important; border-color: #7fb0f3 !important; }
+$SKIN [data-composer-card]::before,
+$SKIN [data-composer-card]::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background: var(--dsh-academy-star) center / contain no-repeat;
+  filter: drop-shadow(0 0 4px #fff5d0aa);
+}
+$SKIN [data-composer-card]::before { left: -15px; }
+$SKIN [data-composer-card]::after { right: -15px; }
+$SKIN [data-composer-input] { box-sizing: border-box !important; padding: 8px 14px 4px !important; }
+
+/* 输入框工具栏按钮：参考效果图的彩色胶囊（「深度思考」粉、「联网搜索」绿）。
+ * 访问模式用粉色胶囊、模型选择用绿色胶囊，「+」为带描边的白色圆钮，发送为蓝色渐变圆钮。 */
+$SKIN button[aria-label^="访问模式"],
+$SKIN button[aria-label^="选择模型"] {
+  height: 30px;
+  padding: 0 10px 0 12px !important;
+  border: 1px solid !important;
+  border-radius: 999px !important;
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+$SKIN button[aria-label^="访问模式"] { color: #d0456b !important; background: #fff1f4 !important; border-color: #f5bccb !important; }
+$SKIN button[aria-label^="访问模式"]:hover { background: #ffe6ec !important; border-color: #ee9fb5 !important; }
+$SKIN button[aria-label^="访问模式"] svg { color: #d0456b; }
+$SKIN button[aria-label^="选择模型"] { color: #2a8a55 !important; background: #effaf3 !important; border-color: #a9dfbd !important; }
+$SKIN button[aria-label^="选择模型"]:hover { background: #e2f6ea !important; border-color: #86cfa2 !important; }
+$SKIN button[aria-label^="选择模型"] * { color: inherit !important; }
+$SKIN button[aria-label="添加文件或调用指令"] {
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid #c9d9f2 !important;
+  color: #27446f !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 6px #1b39651a;
+}
+$SKIN button[aria-label="添加文件或调用指令"]:hover { border-color: #84b8fa !important; }
+$SKIN button[aria-label="发送消息"] {
+  width: 38px !important;
+  height: 38px !important;
+  background: linear-gradient(180deg, #4a97ff, #2f6fe0) !important;
+  box-shadow: inset 0 1px 0 #ffffff55, 0 4px 12px #2f6fe055 !important;
+}
+$SKIN button[aria-label="发送消息"]:disabled { background: linear-gradient(180deg, #a9c8f7, #8fb3ee) !important; box-shadow: none !important; }
+@media (prefers-reduced-motion: reduce) { $SKIN button[aria-label^="访问模式"], $SKIN button[aria-label^="选择模型"] { transition: none; } }
+
+/* ---------- 5. 右侧陪伴栏 ---------- */
+[data-dsh-academy-rail] {
+  position: fixed;
+  z-index: 12;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--dsh-rail-w);
+  pointer-events: none;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: linear-gradient(90deg, #0c1c3900 0%, #0c1c3926 40%, #0c1c3955 100%);
+}
+[data-dsh-academy-rail] button { pointer-events: auto; }
+body:not([data-dsh-anime-skin="active"]) [data-dsh-academy-rail],
+body[data-dsh-anime-skin-stage="focus"] [data-dsh-academy-rail] { display: none; }
+$SKIN[data-dsh-anime-skin-stage="focus"] div:has(> [data-slot="main"]) { padding-right: 14px !important; }
+
+/* 原生右侧面板（文件/终端/浏览器）展开时：收起陪伴栏，对话列不再留位，面板套同款金边 */
+$SKIN:not(:has([data-rightbar-collapsed="true"])) [data-dsh-academy-rail] { display: none; }
+$SKIN:not(:has([data-rightbar-collapsed="true"])) div:has(> [data-slot="main"]) { padding-right: 7px !important; }
+$SKIN [data-rightbar-col] { background: transparent !important; }
+$SKIN [data-rightbar-col]:has([data-sidebar-right-panel="push"][data-sidebar-right-open="true"])::after {
+  content: "";
+  position: absolute;
+  z-index: 30;
+  inset: -1px -1px -1px -8px;
+  pointer-events: none;
+  background:
+    var(--dsh-academy-star) left top / 30px no-repeat,
+    var(--dsh-academy-star) right top / 30px no-repeat,
+    var(--dsh-academy-star) left bottom / 30px no-repeat,
+    var(--dsh-academy-star) right bottom / 30px no-repeat;
+  filter: drop-shadow(0 0 4px #fff5d0aa);
+}
+$SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
+  box-sizing: border-box;
+  width: calc(100% - 21px) !important;
+  min-width: 0 !important;
+  height: calc(100% - 28px);
+  margin: 14px 14px 14px 7px;
+  overflow: hidden;
+  border: 1.5px solid var(--dsh-academy-gold);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7fff0 100%) !important;
+  box-shadow: 0 0 0 4px #ffffff8c, 0 18px 40px #0b1d3d40;
+}
+
+.dsh-academy-memo {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  width: 118px;
+  padding: 14px 12px 12px;
+  transform: rotate(6deg);
+  border-radius: 3px;
+  color: #3a4a6a;
+  font: 600 15px/1.5 "Kaiti SC", "STKaiti", "Hannotate SC", cursive;
+  letter-spacing: .04em;
+  background: linear-gradient(180deg, #fbf3df, #f1e3c2);
+  box-shadow: 0 6px 14px #0b1a3366;
+}
+.dsh-academy-memo::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe7a8, #c9963f);
+  box-shadow: 0 2px 3px #0006;
+}
+.dsh-academy-memo small { display: block; margin-top: 6px; color: #5b6a88; font-size: 11px; font-weight: 500; text-align: right; }
+.dsh-academy-memo[data-has-art] { padding: 0; color: transparent; background: var(--dsh-academy-memo-src) center / contain no-repeat; box-shadow: none; transform: none; aspect-ratio: 1; width: 132px; }
+.dsh-academy-memo[data-has-art]::before, .dsh-academy-memo[data-has-art] * { display: none; }
+
+.dsh-academy-character {
+  position: absolute;
+  transition: opacity 160ms ease;
+  top: 120px;
+  bottom: 270px;
+  left: -18px;
+  width: calc(100% + 24px);
+  height: auto;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+  filter: none; /* 不加投影：压在浅色对话框上会成一圈灰色光晕 */
+}
+
+.dsh-academy-bubble {
+  position: absolute;
+  right: 16px;
+  bottom: 150px;
+  left: 16px;
+  padding: 14px 16px 14px 46px;
+  border: 1.5px solid var(--dsh-academy-gold);
+  border-radius: 16px;
+  color: #2a3f66;
+  font-size: 13.5px;
+  line-height: 1.6;
+  white-space: pre-line;
+  background: #fffdf6f2;
+  box-shadow: 0 0 0 3px #ffffff80, 0 8px 22px #0b1a3355;
+}
+.dsh-academy-bubble::before { content: ""; position: absolute; top: 50%; left: 13px; width: 22px; height: 22px; transform: translateY(-50%); background: var(--dsh-academy-star) center / contain no-repeat; }
+.dsh-academy-bubble::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 48%;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+  border-top: 1.5px solid var(--dsh-academy-gold);
+  border-left: 1.5px solid var(--dsh-academy-gold);
+  background: #fffdf6;
+}
+.dsh-academy-bubble strong { display: block; margin-bottom: 2px; color: #17305a; font-size: 16px; }
+
+.dsh-academy-expressions { position: absolute; right: 12px; bottom: 22px; left: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.dsh-academy-expression {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  color: #eef4ff;
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+  text-shadow: 0 1px 3px #000a;
+  background: none;
+  cursor: pointer;
+}
+.dsh-academy-expression .thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid #ffffff66;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #e9f1ff, #c8dcfb);
+  box-shadow: 0 4px 10px #0b1a3355;
+}
+.dsh-academy-expression img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.dsh-academy-expression img[data-crop] { object-position: center 12%; transform: scale(1.5); transform-origin: center 20%; }
+.dsh-academy-expression em { font-style: normal; padding: 4px 12px; border-radius: 999px; }
+.dsh-academy-expression[aria-pressed="true"] .thumb { border-color: #6fb2ff; box-shadow: 0 0 0 2px #2f7ae6, 0 4px 12px #1d58b866; }
+.dsh-academy-expression[aria-pressed="true"] em { background: #2f7ae6; text-shadow: none; }
+.dsh-academy-expression:focus-visible { outline: none; }
+.dsh-academy-expression:focus-visible .thumb { outline: 2px solid #ffe7a6; outline-offset: 2px; }
+
+/* 素材装饰位：默认隐藏，skin.art 提供对应素材时由 skin-art.css 打开 */
+.dsh-academy-sparkles, .dsh-academy-bigstar, .dsh-academy-desk, .dsh-academy-desk-books, .dsh-academy-desk-globe,
+[data-dsh-academy-props], [data-dsh-academy-lamp], [data-dsh-academy-notes-left], [data-dsh-academy-notes-right] { display: none; pointer-events: none; }
+
+/* 窄窗口：收起右栏，对话框占满 */
+@media (max-width: 1100px) {
+  [data-dsh-academy-rail] { display: none; }
+  $SKIN div:has(> [data-slot="main"]) { padding-right: 14px !important; }
+}
+
+/* 右侧面板「全屏」模式：原生用绝对定位铺满窗口（width: 100vw）。四周留 14px 露出背景，
+ * 金边直接画在面板自身（border-image-outset），不受面板 overflow 裁切影响。 */
+$SKIN [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open="true"] {
+  box-sizing: border-box;
+  width: calc(100vw - 28px) !important;
+  height: calc(100% - 28px);
+  margin: 14px;
+  border: 1.5px solid var(--dsh-academy-gold);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7fff0 100%) !important;
+  box-shadow: 0 0 0 4px #ffffff8c, 0 18px 40px #0b1d3d40;
+}
+
+/* 全屏时右侧面板列要盖过侧栏卡片（10）、对话列（1）和陪伴栏（12），但低于原生弹出菜单层（20） */
+$SKIN [data-rightbar-fullscreen="true"] [data-rightbar-col] { z-index: 18; }
+$SKIN [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open="true"] { background: #f4f8ff !important; }
+$SKIN [data-rightbar-fullscreen="true"] div[data-phase]:has(> [data-conversation-content])::after,
+$SKIN [data-rightbar-fullscreen="true"] div:has(> div > [data-slot="sidebar.workspaces"])::after { display: none; }
+$SKIN:has([data-rightbar-fullscreen="true"]) [data-dsh-academy-props] { display: none; }
+/* 全屏时原生给标签栏左侧留 88px 避让红黄绿窗口按钮；面板已内缩 14px，留 60px 就够 */
+$SKIN [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"] { padding-left: 60px !important; }
+/* 右上角的按钮会压在金框右上角的星星花饰上，往里让 36px */
+$SKIN [data-sidebar-right-panel="fullscreen"] [class*="_tabHostHeader_"] { padding-right: 36px !important; }
+
+/* 右侧面板内容区原生自带一条左分隔线，面板有独立边框后就多余了 */
+$SKIN [data-sidebar-right-panel] [class*="tabHost"] { border-left-color: transparent !important; }
+
+/* ---------- 皮肤切换下拉菜单：触发按钮挂在侧栏品牌行、显示在顶部收起按钮左侧，菜单挂在 body 上 ---------- */
+/* 切换按钮伸出品牌行（在顶部那一行），原版界面的品牌行会裁切溢出，所以两种模式都要放开 */
+div:has(> span > span > span > [data-slot="sidebar.brand.mark"]) { position: relative; overflow: visible !important; }
+.dsh-anime-skin-toggle {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  position: absolute;
+  z-index: 2;
+  /* 与顶部「收起侧栏」按钮同一行、在它左边，不压字标 */
+  top: -26px;
+  right: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 0 6px 0 8px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 7px;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--dsw-alias-bg-layer-2);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.dsh-anime-skin-toggle svg { opacity: .8; transition: transform 140ms ease; }
+.dsh-anime-skin-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+$SKIN .dsh-anime-skin-toggle { border-color: #d6b36f80; color: #f4f7ff; background: #244675; }
+.dsh-anime-skin-toggle:hover { border-color: #d6b36f; }
+.dsh-anime-skin-toggle:focus-visible { outline: 2px solid #80aef0; outline-offset: 2px; }
+
+[data-dsh-skin-menu] {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 196px;
+  padding: 6px;
+  border: 1px solid var(--dsw-alias-border-l2, #7896c455);
+  border-radius: 12px;
+  background: var(--dsw-alias-settings-card-fill, #fff);
+  box-shadow: 0 10px 28px #0b1d3d40;
+  font-family: inherit;
+}
+$SKIN [data-dsh-skin-menu] { border-color: #d9b56d80; background: #fbfdff; }
+.dsh-skin-menu-item {
+  appearance: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px 8px 8px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-primary, #182b4c);
+  text-align: left;
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.dsh-skin-menu-item:hover, .dsh-skin-menu-item:focus-visible { outline: none; background: var(--dsw-alias-interactive-bg-hover, #e8f0ff); }
+.dsh-skin-menu-check { flex: 0 0 14px; padding-top: 2px; color: var(--dsw-alias-brand-primary, #397fe4); visibility: hidden; }
+.dsh-skin-menu-item[aria-checked="true"] .dsh-skin-menu-check { visibility: visible; }
+.dsh-skin-menu-text { display: flex; flex-direction: column; gap: 2px; }
+.dsh-skin-menu-text strong { font-size: 13px; font-weight: 600; line-height: 18px; }
+.dsh-skin-menu-text small { color: var(--dsw-alias-label-tertiary, #788aa8); font-size: 11px; line-height: 16px; }
+@media (prefers-reduced-motion: reduce) { .dsh-anime-skin-toggle, .dsh-anime-skin-toggle svg { transition: none; } }

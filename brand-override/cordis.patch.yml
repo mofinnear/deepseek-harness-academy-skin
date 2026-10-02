@@ -1,0 +1,5 @@
+# Insert row for the local logo override. Merged into
+# ~/.dsh/profiles/desktop/cordis.patch.yml by tools/install.mjs.
+- insert:
+    - id: local-dsh-logo
+      name: ./node_modules/@local/dsh-logo/index.js

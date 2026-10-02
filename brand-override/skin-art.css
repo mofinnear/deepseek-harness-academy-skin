@@ -1,0 +1,337 @@
+/*
+ * 星海书院皮肤 · 素材装饰层（GPT 生成的边框、星饰、侧栏道具、桌子）。
+ *
+ * 每段 `@art <key>` 只有在 logo.config.json 的 skin.art.<key> 配置了 source 时，
+ * 才会被 tools/build.mjs 拼进样式；没配置就保持 skin.css 里的纯 CSS 外观。
+ * 素材地址以 CSS 变量 --dsh-academy-<key 的短横线形式>-src 提供。
+ *
+ * 九宫格边框的 slice 数值是原图像素（构建时禁止缩小这三张图）：
+ *   panel-frame.png    1024×1024  边框外线：左右 x≈42，上下 y≈60；可拉伸段 x 169–856 / y 209–832
+ *   sidebar-frame.png   600×1500  边框线：左右 x≈42，上下 y≈56；可拉伸段 x 104–492 / y 116–1377
+ *   composer-frame.png 1600×190   胶囊上下线 y≈14 / 172；两端半圆 + 星，可拉伸段 x 154–1445
+ * 显示比例统一取 0.45：border-image-width = slice × 0.45，外扩 inset = 线位置 × 0.45，
+ * 这样金线正好压在面板边缘上。
+ */
+
+/* @art panelFrame */
+$SKIN div[data-phase]:has(> [data-conversation-content]) {
+  isolation: isolate;
+  border-color: transparent !important;
+  border-radius: 20px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* 白底单独放一层，收进金框内线以内（没有 panelFillMask 时的退路：圆角矩形）。 */
+$SKIN div[data-phase]:has(> [data-conversation-content])::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 5px;
+  border-radius: 16px;
+  pointer-events: none;
+  /* 底部不透明，和输入框区域的底色 #f2f7ff 完全一致，接缝处看不出矩形边 */
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7ff 88%);
+  box-shadow: 0 18px 40px #0b1d3d40;
+}
+$SKIN div[data-phase]:has(> [data-conversation-content])::after {
+  inset: -27px -19px;
+  background: none;
+  filter: drop-shadow(0 0 3px #fff3c866);
+  border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px stretch;
+}
+/* 四角花饰向内伸约 46px：顶栏左右让出位置，避免压住标题和右侧按钮 */
+$SKIN div[data-phase]:has(> [data-conversation-content]) header { padding-right: 46px !important; padding-left: 46px !important; }
+$SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
+  padding: 4px 26px 0;
+  border-color: transparent;
+  border-radius: 20px;
+  box-shadow: 0 18px 40px #0b1d3d40;
+}
+$SKIN [data-rightbar-col]:has([data-sidebar-right-panel="push"][data-sidebar-right-open="true"])::after {
+  inset: -13px -5px -13px -12px;
+  background: none;
+  filter: drop-shadow(0 0 3px #fff3c866);
+  border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px stretch;
+}
+$SKIN [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open="true"] {
+  border-color: transparent;
+  border-radius: 20px;
+  box-shadow: 0 18px 40px #0b1d3d40;
+  border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px / 27px 19px stretch;
+}
+/* @end */
+
+/* @art panelFillMask */
+/* 白底按金框内侧的真实形状裁切：panel-fill-mask.png 是对 panel-frame.png 内部做泛洪填充
+ * 得到的（再外扩 3px 压到内线下），与金框用同一套九宫格切片和外扩，四角卷边处不露白。
+ * 必须排在 panelFrame 之后，覆盖上面的圆角矩形退路。 */
+$SKIN div[data-phase]:has(> [data-conversation-content])::before {
+  inset: -27px -19px;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-mask-box-image: var(--dsh-academy-panel-fill-mask-src) 215 175 / 97px 79px stretch;
+}
+/* 右侧面板同理：面板自身和内容区（tabHost）的底色都去掉，白底改画在面板列的 ::before 上，
+ * 位置与列上的金框 ::after 完全一致，再用同一张遮罩裁切。列设 isolation 才能让 z-index: -1
+ * 的白底留在列里、垫在面板下面，而不是沉到全景背景后面。 */
+$SKIN [data-rightbar-col] { isolation: isolate; }
+$SKIN [data-sidebar-right-panel][data-sidebar-right-open="true"],
+$SKIN [data-sidebar-right-panel][data-sidebar-right-open="true"] [class*="tabHost"],
+$SKIN [data-sidebar-right-panel][data-sidebar-right-open="true"] [class*="emptyTabHost"] { background: transparent !important; }
+$SKIN [data-rightbar-col]:has([data-sidebar-right-panel="push"][data-sidebar-right-open="true"])::before,
+$SKIN [data-rightbar-col]:has([data-sidebar-right-panel="fullscreen"][data-sidebar-right-open="true"])::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -13px -5px -13px -12px;
+  pointer-events: none;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7ff 88%);
+  -webkit-mask-box-image: var(--dsh-academy-panel-fill-mask-src) 215 175 / 97px 79px stretch;
+}
+/* 全屏时面板铺满窗口（四周留 14px），金框画在面板自身、外扩 27/19px，白底按窗口定位对齐 */
+$SKIN [data-rightbar-col]:has([data-sidebar-right-panel="fullscreen"][data-sidebar-right-open="true"])::before {
+  position: fixed;
+  inset: -13px -5px;
+  background: #f4f8ff;
+}
+/* @end */
+
+/* @art sidebarFrame */
+$SKIN div:has(> div > [data-slot="sidebar.workspaces"]) {
+  border-color: transparent !important;
+  border-radius: 20px !important;
+  box-shadow: 0 18px 40px #050f2466 !important;
+}
+$SKIN div:has(> div > [data-slot="sidebar.workspaces"])::after {
+  inset: -25px -19px;
+  background: none;
+  filter: drop-shadow(0 0 3px #fff3c866);
+  border-image: var(--dsh-academy-sidebar-frame-src) 125 110 / 56px 50px stretch;
+}
+/* @end */
+
+/* @art composerFrame */
+/* 胶囊边框 composer-frame-v2.png（2172×354，GPT 第二版，单道细金线，已裁掉上下光晕区）：
+ *   上下金线中心在 y=39 / 313（间距 274），两端半圆半径 137，弧线最外点中心在 x≈69；
+ *   两端装饰在 x<420 以内，中间是均匀直线。
+ * 金线间距 274 对应输入框高度 H，整张图按 k = H/274 缩放：
+ *   上外扩 39k ≈ 14.2% H，下外扩 41k ≈ 15.0% H，左右外扩 69k ≈ 0.252H，两端切片宽 420k ≈ 1.533H。
+ * 半圆半径 137k 正好是 H/2，与 border-radius: 999px 的胶囊重合。
+ * H 由 client.js 用 ResizeObserver 写到 --dsh-composer-h 上（没有时按 98px 计算）。 */
+$SKIN [data-composer-card] {
+  --dsh-ch: var(--dsh-composer-h, 98px);
+  isolation: isolate;
+  border-color: transparent !important;
+  border-radius: 999px !important;
+  padding-right: 34px !important;
+  padding-left: 34px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* 白底就是这个胶囊本身，内缩 3px 压在金线下面 */
+$SKIN [data-composer-card]::before {
+  display: block;
+  inset: 3px;
+  z-index: -1;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: 999px;
+  background: #ffffff;
+  filter: none;
+  box-shadow: none;
+}
+/* 获得焦点时撤掉原生的蓝色边框和光圈 */
+$SKIN [data-composer-card]:focus-within {
+  outline: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+$SKIN [data-composer-card]:focus-within::before { box-shadow: none; }
+/* 输入框里的按钮（访问模式、模型等）键盘焦点框：原生是 3px 粗蓝框，换成淡色圆角框 */
+$SKIN [data-composer-card] button:focus-visible {
+  outline: 1.5px solid #84b8fa !important;
+  outline-offset: 1px !important;
+  border-radius: 8px;
+}
+$SKIN [data-composer-card]::after {
+  top: -14.2%;
+  right: calc(var(--dsh-ch) * -0.252);
+  bottom: -15%;
+  left: calc(var(--dsh-ch) * -0.252);
+  width: auto;
+  height: auto;
+  transform: none;
+  background: none;
+  filter: none; /* 不加外发光，保持线条锐利 */
+  border-image: var(--dsh-academy-composer-frame-src) 177 420 / 50% calc(var(--dsh-ch) * 1.533) stretch;
+}
+/* @end */
+
+/* @art starLarge */
+/* 大星：右侧陪伴栏里，挂在角色头部左上方 */
+.dsh-academy-bigstar {
+  position: absolute;
+  top: 128px;
+  left: 8px;
+  display: block;
+  width: 44px;
+  height: 44px;
+  background: var(--dsh-academy-star-large-src) center / contain no-repeat;
+  filter: drop-shadow(0 0 6px #ffe7a6aa);
+}
+/* @end */
+
+/* @art starSparkles */
+/* 星点群：从对话框右上角斜向散开到角色头顶 */
+.dsh-academy-sparkles {
+  position: absolute;
+  top: 40px;
+  left: -44px;
+  display: block;
+  width: 150px;
+  height: 150px;
+  background: var(--dsh-academy-star-sparkles-src) center / contain no-repeat;
+}
+/* @end */
+
+/* @art desk */
+/* 桌子：图片顶边就是桌面后沿（构建前已裁掉上方透明区）。角色前臂搭在后沿上，
+ * 气泡和表情栏叠在桌面上。宽度不够时按高度铺满，取左侧（笔和书）那一段。 */
+.dsh-academy-desk {
+  position: absolute;
+  top: 63vh;
+  right: 0;
+  bottom: 0;
+  left: -6px;
+  display: block;
+  background: var(--dsh-academy-desk-src) 18% top / cover no-repeat;
+  filter: drop-shadow(0 -4px 10px #0b1a3355);
+}
+/* 角色在桌子前面：前臂压在桌面后沿往下约 34px。立绘下沿本身画了手臂轮廓（不是硬截断），
+ * 不要加渐隐遮罩，否则手指和袖口会变成半透明。 */
+$SKIN .dsh-academy-character {
+  top: 104px;
+  bottom: auto;
+  left: -64px;
+  width: calc(100% + 70px);
+  height: calc(63vh - 104px + 34px);
+}
+$SKIN .dsh-academy-bubble { bottom: 132px; }
+/* @end */
+
+/* @art sidebarProps */
+/* 书本 + 墨水瓶 + 羽毛笔，压在侧栏右下边缘，略伸出侧栏外。侧栏收起时隐藏。 */
+$SKIN [data-dsh-academy-props] {
+  position: fixed;
+  z-index: 11;
+  bottom: 4px;
+  left: 128px;
+  display: block;
+  width: 190px;
+  height: 152px;
+  background: var(--dsh-academy-sidebar-props-src) right bottom / contain no-repeat;
+  filter: drop-shadow(0 6px 10px #050f2488);
+}
+$SKIN:has([data-sidebar-collapsed="true"]) [data-dsh-academy-props],
+body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-props] { display: none; }
+/* @end */
+
+/* @art deskBooks */
+/* 桌面上的空位只有两处：角色手下方、气泡上方的窄条，和右侧袖口外。
+ * 摆件切成两张、叠在角色前面：书摞垫在手下方，底部藏进气泡上沿；天球仪放在右侧袖口外。
+ * 两者都按气泡上沿对齐（气泡底 132px + 高约 102px），窗口高度变化时跟着气泡走。 */
+.dsh-academy-desk-books {
+  position: absolute;
+  bottom: 226px;
+  left: 4px;
+  display: block;
+  width: 88px;
+  height: 47px;
+  background: var(--dsh-academy-desk-books-src) center bottom / contain no-repeat;
+  filter: drop-shadow(0 3px 4px #0b1a3366);
+}
+/* @end */
+
+/* @art deskGlobe */
+.dsh-academy-desk-globe {
+  position: absolute;
+  right: -8px;
+  bottom: 222px;
+  display: block;
+  width: 100px;
+  height: 92px;
+  background: var(--dsh-academy-desk-globe-src) right bottom / contain no-repeat;
+  filter: drop-shadow(0 3px 5px #0b1a3366);
+}
+/* @end */
+
+/* @art bubbleFrame */
+/* 气泡边框：九宫格（原图裁成 740×268，四角花饰在 85px 以内），米白底由图本身填充。 */
+.dsh-academy-bubble {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border-image: var(--dsh-academy-bubble-frame-src) 85 85 85 85 fill / 34px stretch;
+  border-image-outset: 4px;
+  filter: drop-shadow(0 8px 16px #0b1a3366);
+}
+/* @end */
+
+/* @art bubbleTail */
+/* 气泡尖角：底边接在气泡上沿、压住那一段金线，尖端朝上偏左指向角色 */
+.dsh-academy-bubble::after {
+  top: -24px;
+  left: 46%;
+  width: 34px;
+  height: 24px;
+  transform: none;
+  border: 0;
+  background: var(--dsh-academy-bubble-tail-src) center bottom / contain no-repeat;
+}
+/* @end */
+
+/* @art sidebarLamp */
+/* 油灯：侧栏左下角，130×179。灯身只占图片左侧约 40%（宽约 53px），账号行左侧只让 34px，
+ * 头像紧贴灯身右边；灯下的书在账号行下方，不会遮挡名字。 */
+$SKIN [data-dsh-academy-lamp] {
+  position: fixed;
+  z-index: 11;
+  bottom: 2px;
+  left: 0;
+  display: block;
+  width: 130px;
+  height: 179px;
+  background: var(--dsh-academy-sidebar-lamp-src) left bottom / contain no-repeat;
+  filter: drop-shadow(0 4px 8px #050f2488);
+}
+$SKIN [data-slot="sidebar.settings"] button[aria-haspopup="menu"] { padding-left: 34px !important; }
+/* 账号名在右下角书本前截断，避免被书压住 */
+$SKIN [data-slot="sidebar.settings"] button[aria-haspopup="menu"] [class*="_label"] { max-width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+$SKIN:has([data-sidebar-collapsed="true"]) [data-dsh-academy-lamp],
+body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-lamp] { display: none; }
+/* @end */
+
+/* @art hangingNotes */
+/* 挂着的书页：一条挂在侧栏右边缘（压在侧栏与对话框之间的缝上），一条镜像后挂在窗口左边缘、大半露在外面。 */
+$SKIN [data-dsh-academy-notes-right],
+$SKIN [data-dsh-academy-notes-left] {
+  position: fixed;
+  z-index: 11;
+  display: block;
+  width: 52px;
+  height: 246px;
+  background: var(--dsh-academy-hanging-notes-src) center top / contain no-repeat;
+  filter: drop-shadow(0 4px 6px #050f2477);
+}
+$SKIN [data-dsh-academy-notes-right] { top: 430px; left: 254px; }
+$SKIN [data-dsh-academy-notes-left] { top: 250px; left: -26px; transform: scaleX(-1); }
+$SKIN:has([data-sidebar-collapsed="true"]) [data-dsh-academy-notes-right],
+$SKIN:has([data-sidebar-collapsed="true"]) [data-dsh-academy-notes-left],
+$SKIN:has([data-rightbar-fullscreen="true"]) [data-dsh-academy-notes-right],
+$SKIN:has([data-rightbar-fullscreen="true"]) [data-dsh-academy-lamp],
+body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-notes-right],
+body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-notes-left] { display: none; }
+/* @end */
+
