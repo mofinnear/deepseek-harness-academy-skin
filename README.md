@@ -6,6 +6,8 @@
 
 ![星海书院皮肤预览](docs/layout-preview.png)
 
+> 新会话 / 新协作者接手时先读 [`docs/交接说明.md`](docs/交接说明.md)（项目现状、流程、结构、待办）。
+>
 > 想把这套修改分享给别人，或自己继续改之前，先看 [`docs/修改记录.md`](docs/修改记录.md)：里面有复现步骤、调试方法、踩过的坑和版本记录。
 >
 > **任何改动之前先备份**：`node tools/backup.mjs <说明>`；改崩了用 `node tools/backup.mjs --restore <目录名>` 还原。
