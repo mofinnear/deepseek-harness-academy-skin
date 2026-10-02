@@ -122,7 +122,7 @@
         "webp": true
       },
       "desk": {
-        "source": "assets/ui/desk-v4.png",
+        "source": "assets/ui/desk-v5.png",
         "maxPx": 1100,
         "webp": true
       },

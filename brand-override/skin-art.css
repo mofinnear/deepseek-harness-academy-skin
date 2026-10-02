@@ -198,7 +198,7 @@ $SKIN [data-composer-card]::after {
 /* @art desk */
 /* 书桌 desk-v4.png（1200×1800）：GPT 先画「角色 + 书桌」合成图，再去掉角色单独画出书桌，
  * 所以它的前 1312 行与立绘（1199×1312）逐像素对应：桌面后沿在 y≈1142，立绘前臂（到 y≈1297）正好压在桌面上。
- * 原图偏暗，已提亮暗部、略偏冷，接近书院场景图的清亮质感（原图保留为 desk-v4-original.png）。
+ * 当前用 desk-v5.png：Codex 按同一构图重新生成的白天光照版（与 desk-v4-original.png 轮廓 IoU 0.997），不做程序调色。
  *
  * 对齐方法：立绘和书桌都按同一个高度 --dsh-ch-h 缩放、同一个水平中心定位，
  * 立绘不再受陪伴栏宽度限制（宽度由高度算出），这样任何窗口尺寸下两者都严格对齐。
@@ -214,7 +214,7 @@ $SKIN [data-dsh-academy-rail] {
   inset: 0;
   display: block;
   background:
-    linear-gradient(180deg, #716773 0px, #2a2433 140px) left 0 top calc(104px + var(--dsh-desk-h) - 2px) / 100% 100% no-repeat,
+    linear-gradient(180deg, #433846 0px, #1e1a26 140px) left 0 top calc(104px + var(--dsh-desk-h) - 2px) / 100% 100% no-repeat,
     var(--dsh-academy-desk-src) left var(--dsh-ch-x) top 104px / var(--dsh-ch-w) var(--dsh-desk-h) no-repeat;
 }
 /* 角色在桌子前面：立绘下沿本身画了手臂轮廓（不是硬截断），不要加渐隐遮罩，否则手指和袖口会变成半透明。 */
