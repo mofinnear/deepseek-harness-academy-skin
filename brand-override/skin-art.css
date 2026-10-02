@@ -214,7 +214,7 @@ $SKIN [data-dsh-academy-rail] {
   inset: 0;
   display: block;
   background:
-    linear-gradient(180deg, #433846 0px, #1e1a26 140px) left 0 top calc(104px + var(--dsh-desk-h) - 2px) / 100% 100% no-repeat,
+    linear-gradient(180deg, #76432b 0px, #2a2028 140px) left 0 top calc(104px + var(--dsh-desk-h) - 2px) / 100% 100% no-repeat,
     var(--dsh-academy-desk-src) left var(--dsh-ch-x) top 104px / var(--dsh-ch-w) var(--dsh-desk-h) no-repeat;
 }
 /* 角色在桌子前面：立绘下沿本身画了手臂轮廓（不是硬截断），不要加渐隐遮罩，否则手指和袖口会变成半透明。 */

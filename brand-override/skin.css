@@ -30,7 +30,8 @@ body[data-dsh-anime-skin="active"]::before {
   z-index: 0;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(180deg, #0c1c3948 0%, #10234124 48%, #0c1c3952 100%), var(--dsh-anime-workspace-background-src);
+  /* 背景已是白天通透版，压暗层只保留极淡一层，帮浅色文字在边缘处略有对比 */
+  background-image: linear-gradient(180deg, #0c1c3914 0%, #10234108 48%, #0c1c391c 100%), var(--dsh-anime-workspace-background-src);
   background-position: center, center;
   background-size: cover, cover;
   background-repeat: no-repeat, no-repeat;
