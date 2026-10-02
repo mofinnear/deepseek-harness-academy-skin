@@ -1,7 +1,7 @@
 """生成侧栏星图底纹（SVG）。
 用法: python3 tools/sidebar_starmap.py <输出前缀> [--seed N] [--dots N] [--cons N] [--sparks N]
 输出 <前缀>.svg 和 <前缀>.uri（CSS 用的 data URI）。
-星点用泊松盘采样（彼此保持最小距离），星座是随机游走的 3–6 颗星，起点彼此保持距离。"""
+星点用泊松盘采样（彼此保持最小距离），星座是随机游走的 3–6 颗星（只画开放折线，不闭合），起点彼此保持距离。"""
 import urllib.parse, random, math, argparse
 ap = argparse.ArgumentParser()
 ap.add_argument('out'); ap.add_argument('--seed', type=int, default=20261002)
@@ -37,12 +37,14 @@ for sx, sy in starts:
         n = random.randint(3, 6); x, y = sx, sy
         ang = random.uniform(0, 2 * math.pi); c = [(x, y)]; ok = True
         for i in range(n - 1):
-            ang += random.uniform(-1.4, 1.4); step = random.uniform(20, 44)
+            ang += random.uniform(-0.9, 0.9); step = random.uniform(20, 44)
             x, y = x + step * math.cos(ang), y + step * math.sin(ang)
             if not (14 < x < W - 14 and abs(y - sy) < band * .55): ok = False; break
             c.append((x, y))
+        # 只要开放的折线：首尾不能靠得太近，也不能有点回到前面的点附近（避免看起来像封闭图形）
+        if ok and n >= 3 and math.dist(c[0], c[-1]) < 40: ok = False
+        if ok and any(math.dist(c[i], c[j]) < 18 for i in range(len(c)) for j in range(i + 2, len(c))): ok = False
         if ok: break
-    if n >= 5 and random.random() < .35: c.append(c[random.randint(0, 1)])
     d = 'M' + ' L'.join(f'{r2(a)} {r2(b)}' for a, b in c)
     parts.append(f"<path d='{d}' fill='none' stroke='#e4ecff' stroke-width='.7' opacity='{random.choice([.4, .5, .6])}'/>")
     for a, b in set(c):
