@@ -393,13 +393,13 @@ window.__ModuleLoader__.load({
       desk.className = 'dsh-academy-desk';
       [sparkles, bigStar, desk].forEach(function (node) { node.setAttribute('aria-hidden', 'true'); });
 
-      /* Paint order: memo, sparkles, star, desk, portrait (arms rest on the desk), desk books/globe in front, bubble, picker. */
+      /* Paint order: memo, sparkles, star, desk, desk books/globe (behind the arms), portrait, bubble, picker. */
       var deskBooks = document.createElement('div');
       deskBooks.className = 'dsh-academy-desk-books';
       var deskGlobe = document.createElement('div');
       deskGlobe.className = 'dsh-academy-desk-globe';
       [deskBooks, deskGlobe].forEach(function (node) { node.setAttribute('aria-hidden', 'true'); });
-      rail.append(memo, sparkles, bigStar, desk, character, deskBooks, deskGlobe, bubble, picker);
+      rail.append(memo, sparkles, bigStar, desk, deskBooks, deskGlobe, character, bubble, picker);
       document.body.appendChild(rail);
       selectExpression(rail, storedExpression(), false);
     }

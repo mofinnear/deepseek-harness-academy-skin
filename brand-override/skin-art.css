@@ -238,37 +238,38 @@ body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-props] { dis
 /* @end */
 
 /* @art deskBooks */
-/* 桌面上的空位只有两处：角色手下方、气泡上方的窄条，和右侧袖口外。
- * 摆件切成两张、叠在角色前面：书摞垫在手下方，底部藏进气泡上沿；天球仪放在右侧袖口外。
- * 两者都按气泡上沿对齐（气泡底 132px + 高约 102px），窗口高度变化时跟着气泡走。 */
+/* 摆件排在立绘之前（client.js），被手臂、头发和气泡挡住一部分，和效果图一样只露出一角：
+ * 书摞在左侧手臂下方的桌面上、半藏在气泡尖角后面；天球仪在右侧头发后面。
+ * 整体压暗、降饱和，接近桌面的夜间光照，不再像贴上去的。 */
 .dsh-academy-desk-books {
   position: absolute;
-  bottom: 226px;
-  left: 4px;
+  top: calc(63vh + 8px);
+  left: -10px;
   display: block;
-  width: 88px;
-  height: 47px;
-  background: var(--dsh-academy-desk-books-src) center bottom / contain no-repeat;
-  filter: drop-shadow(0 3px 4px #0b1a3366);
+  width: 110px;
+  height: 60px;
+  background: var(--dsh-academy-desk-books-src) left bottom / contain no-repeat;
+  filter: brightness(.78) saturate(.8) drop-shadow(0 4px 3px #050d1f99);
 }
 /* @end */
 
 /* @art deskGlobe */
 .dsh-academy-desk-globe {
   position: absolute;
-  right: -8px;
-  bottom: 222px;
+  top: calc(63vh - 86px);
+  right: -18px;
   display: block;
-  width: 100px;
-  height: 92px;
+  width: 96px;
+  height: 90px;
   background: var(--dsh-academy-desk-globe-src) right bottom / contain no-repeat;
-  filter: drop-shadow(0 3px 5px #0b1a3366);
+  filter: brightness(.72) saturate(.75) drop-shadow(0 4px 3px #050d1f99);
 }
 /* @end */
 
 /* @art bubbleFrame */
 /* 气泡边框：九宫格（原图裁成 740×268，四角花饰在 85px 以内），米白底由图本身填充。 */
 .dsh-academy-bubble {
+  left: 34px; /* 左侧留出尖角的位置 */
   border: 0;
   border-radius: 0;
   background: none;
@@ -280,13 +281,14 @@ body[data-dsh-anime-skin-stage="background-only"] [data-dsh-academy-props] { dis
 /* @end */
 
 /* @art bubbleTail */
-/* 气泡尖角：底边接在气泡上沿、压住那一段金线，尖端朝上偏左指向角色 */
+/* 气泡尖角：照效果图放在气泡左侧中间、尖端朝左（指向对话框）。
+ * 原图尖端朝上，逆时针转 90°；转完后底边压在气泡左边的金线上。 */
 .dsh-academy-bubble::after {
-  top: -24px;
-  left: 46%;
+  top: 50%;
+  left: -31px;
   width: 34px;
   height: 24px;
-  transform: none;
+  transform: translateY(-50%) rotate(-90deg);
   border: 0;
   background: var(--dsh-academy-bubble-tail-src) center bottom / contain no-repeat;
 }
