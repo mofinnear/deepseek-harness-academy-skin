@@ -41,7 +41,7 @@
     "mascot": {
       "$comment": "combo: 合成图布局（assets/combo/，round14 坐标 x 250–1250 的 1000×1120），隐藏 skin.art.desk。desk/front 给出时是「固定书桌 + 人物层」：书桌 desk 只放一份不切换，表情只换人物层（source，tools/char_layers.py 由 relit3 立绘生成，1199×1352 立绘坐标），front 是叠在人物上面的羽毛笔和墨水瓶。不给 desk 时 source 是整张合成图、配合 expressions[].hair（旧做法）。",
       "source": "assets/combo/char-default.png",
-      "maxPx": 1100,
+      "maxPx": 1700,
       "webp": true,
       "combo": true,
       "desk": "assets/combo/desk-fixed.png",
@@ -58,7 +58,7 @@
         "label": "默认",
         "source": null,
         "thumb": "assets/combo/thumb-default.png",
-        "maxPx": 1100,
+        "maxPx": 1700,
         "message": "有什么问题都可以问我哦！\n我会一直在这里！",
         "webp": true
       },
@@ -66,7 +66,7 @@
         "label": "开心",
         "source": "assets/combo/char-happy.png",
         "thumb": "assets/combo/thumb-happy.png",
-        "maxPx": 1100,
+        "maxPx": 1700,
         "message": "太好啦！\n我们一起把它做完吧！",
         "webp": true
       },
@@ -74,7 +74,7 @@
         "label": "好奇",
         "source": "assets/combo/char-curious.png",
         "thumb": "assets/combo/thumb-curious.png",
-        "maxPx": 1100,
+        "maxPx": 1700,
         "message": "嗯？这个问题很有意思，\n让我想想～",
         "webp": true
       },
@@ -82,7 +82,7 @@
         "label": "眨眼",
         "source": "assets/combo/char-wink.png",
         "thumb": "assets/combo/thumb-wink.png",
-        "maxPx": 1100,
+        "maxPx": 1700,
         "message": "交给我吧！\n有我在就放心～",
         "webp": true
       }
@@ -128,7 +128,7 @@
       },
       "desk": {
         "source": null,
-        "maxPx": 1100,
+        "maxPx": 1700,
         "webp": true
       },
       "bubbleFrame": {
@@ -151,7 +151,7 @@
       }
     }
   },
-  "maxBundleBytes": 6000000,
+  "maxBundleBytes": 8000000,
   "text": {
     "$comment": [
       "Optional: set useCustomText to true to render a text wordmark instead of",

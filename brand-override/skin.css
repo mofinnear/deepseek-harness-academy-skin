@@ -462,7 +462,7 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  * 合成图截在陪伴栏里（书桌不能盖到对话框上）；伸出栏外盖住对话框的只有头发：
  * assets/combo/hair-*.png 是合成图左侧 x 0–270、y 0–700 的一条，桌面以下只留发丝（tools/combo_hair.py），
  * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。
- * 「固定书桌 + 人物层」（陪伴栏带 data-layered，第九步）：书桌 desk-fixed 一张不切换，截在栏内；
+ * 「固定书桌 + 人物层」（陪伴栏带 data-layered，第九步）：每个表情一组 = 书桌 desk-fixed（截在栏内）+ 人物层 + 前景，整组交叉渐变；
  * 人物层 char-*（tools/char_layers.py 由 relit3 立绘生成）不截，伸出栏外的头发直接盖住对话框，不再需要头发条。
  * 人物层是立绘坐标（1199×1312，底部多 40px 放阴影，共 1352），按立绘框放：左 = 立绘左，宽 = 立绘宽，
  * 上 = 合成图上沿 − 3 / 1120 × 合成图高（立绘左上角在合成图 (174, −3)），高 = 立绘高 × 1352 / 1312。
@@ -483,6 +483,9 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   inset: 0;
   pointer-events: none;
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
+}
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pose {
+  transition-duration: 220ms; /* 每组都带同一张书桌：新的一组先完整淡入，旧的再淡出（client.js） */
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,

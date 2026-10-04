@@ -335,10 +335,10 @@ window.__ModuleLoader__.load({
     /**
      * A pose never fades to empty: the new pose is stacked on top, faded in once
      * decoded, and the poses below it fade out and are dropped. Layered mode
-     * (skinAssets.comboDesk): the desk and the quill/inkwell in front are single
-     * fixed images and only the character layer switches, so the desk never
-     * shows double. Older combo art carries the desk in every pose; then the
-     * desk layer behind the chat panel holds poses too and both switch together.
+     * (skinAssets.comboDesk): each pose is the shared desk + that expression's
+     * figure + the quill/inkwell, so the picture switches as a whole; the desk
+     * layer behind the chat panel is the desk alone and does not switch. Older
+     * combo art: the desk layer behind the panel holds poses too.
      */
     var comboPreload = [];
 
@@ -347,7 +347,9 @@ window.__ModuleLoader__.load({
       var setSources = function (pose) {
         var images = [];
         pose.querySelectorAll('img').forEach(function (img) {
-          img.src = img.classList.contains('dsh-academy-hair') ? entry.hair : entry.src;
+          /* The desk and the quill/inkwell inside a layered pose keep their art. */
+          if (img.classList.contains('dsh-academy-character')) img.src = entry.src;
+          else if (img.classList.contains('dsh-academy-hair')) img.src = entry.hair;
           images.push(img);
         });
         return images;
@@ -381,16 +383,17 @@ window.__ModuleLoader__.load({
           /* Only poses stacked below this one, so a quicker later pick survives. */
           var below = [];
           for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
-          /* The old pose fades out too (otherwise it shows through the new pose's
-           * transparent parts and pops off at the end), starting a beat later so
-           * the shared desk barely dims. Both fades are short (150 ms) because
-           * while two poses overlap the hands and hair show double. */
+          /* Layered poses carry the same desk, so the new pose fades in fully over
+           * the old one (the picture changes as a whole and never dims), then the
+           * old one fades out (only its hair outside the new figure still shows)
+           * and is dropped. Older combo art overlaps the two fades instead. */
+          var layered = Boolean(skinAssets.comboDesk);
           window.setTimeout(function () {
             below.forEach(function (node) { node.style.opacity = '0'; });
-          }, 70);
+          }, layered ? 220 : 70);
           window.setTimeout(function () {
             below.forEach(function (node) { node.remove(); });
-          }, 300);
+          }, layered ? 480 : 300);
         });
       };
       Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
@@ -442,12 +445,13 @@ window.__ModuleLoader__.load({
         var pose = document.createElement('div');
         pose.className = 'dsh-academy-pose';
         if (skinAssets.comboDesk) {
-          /* Layered: fixed desk (clipped to the rail) below, the character layer
-           * unclipped so its hair spills over the chat panel, quill and inkwell on top. */
+          /* Layered: desk (clipped to the rail) below, the character layer unclipped
+           * so its hair spills over the chat panel, quill and inkwell on top. */
           rail.setAttribute('data-layered', '');
-          pose.appendChild(character);
-          comboStack = [comboImage('dsh-academy-combo-desk', skinAssets.comboDesk), pose];
-          if (skinAssets.comboFront) comboStack.push(comboImage('dsh-academy-combo-front', skinAssets.comboFront));
+          /* Desk, figure and quill switch together as one picture. */
+          pose.append(comboImage('dsh-academy-combo-desk', skinAssets.comboDesk), character);
+          if (skinAssets.comboFront) pose.appendChild(comboImage('dsh-academy-combo-front', skinAssets.comboFront));
+          comboStack = [pose];
         } else {
           /* Combo art clipped to the rail + a hair-only strip that spills past
            * the rail edge over the chat panel. */
