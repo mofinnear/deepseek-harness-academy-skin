@@ -463,8 +463,10 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  * assets/combo/hair-*.png 是合成图左侧 x 0–270、y 0–700 的一条，桌面以下只留发丝（tools/combo_hair.py），
  * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。
  * 「固定书桌 + 人物层」（陪伴栏带 data-layered，第九步）：书桌 desk-fixed 一张不切换，截在栏内；
- * 人物层 char-*（tools/combo_layers.py）不截，伸出栏外的头发直接盖住对话框，不再需要头发条；
- * 最上面是从书桌切出的羽毛笔和墨水瓶 desk-front。三张都是同一原点、同一尺寸。 */
+ * 人物层 char-*（tools/char_layers.py 由 relit3 立绘生成）不截，伸出栏外的头发直接盖住对话框，不再需要头发条。
+ * 人物层是立绘坐标（1199×1312，底部多 40px 放阴影，共 1352），按立绘框放：左 = 立绘左，宽 = 立绘宽，
+ * 上 = 合成图上沿 − 3 / 1120 × 合成图高（立绘左上角在合成图 (174, −3)），高 = 立绘高 × 1352 / 1312。
+ * 书桌 desk-fixed 和羽毛笔、墨水瓶 desk-front 是合成图坐标（1000×1120），和以前的合成图同一位置。 */
 $SKIN [data-dsh-academy-rail][data-combo],
 $SKIN [data-dsh-academy-desk-back] {
   --dsh-ch-h: calc(63vh - 70px);
@@ -504,7 +506,13 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-front {
   height: calc(var(--dsh-ch-h) * 1.8358);
   clip-path: inset(0 0 0 var(--dsh-combo-rail-x));
 }
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character { clip-path: none; }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character {
+  top: calc(104px - var(--dsh-ch-h) * 0.0098);
+  left: var(--dsh-ch-x);
+  width: var(--dsh-ch-w);
+  height: calc(var(--dsh-ch-h) * 1.0305);
+  clip-path: none;
+}
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
   width: calc(var(--dsh-ch-w) * 0.4843);   /* 270 / 1000 × 合成图宽 */
   height: calc(var(--dsh-ch-h) * 1.1474);  /* 700 / 1120 × 合成图高 */
