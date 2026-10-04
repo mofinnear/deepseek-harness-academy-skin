@@ -16,6 +16,7 @@
 用法：python3 tools/char_layers.py --src <素材目录>/round6/relit3 [--override <素材目录>/round16] [--desk <素材目录>/round15/desk-fixed.png] [--debug <目录>]
 （--override 目录里有同名立绘时优先用它，没有的仍用 --src）
 给 GPT 画光影的输入图：python3 tools/char_layers.py --src … --desk <round15/desk-fixed.png> --compose <素材目录>/round17/输入
+阴影取自 GPT（第二步）：python3 tools/char_layers.py --src … --shade-from <素材目录>/round18 --inputs <素材目录>/round17/输入
 """
 import sys
 from pathlib import Path
@@ -56,7 +57,7 @@ EDGE = round(((DESK_BACK - FIG_Y) / FIG_K + 3) * S)   # 桌面后沿换成立绘
 CANVAS_DY = 27             # 只用于给 GPT 的输入图：整张画面往下移的像素（角色上提后呆毛会超出画布顶部）
 
 
-def char_layer(src, shade=True):
+def char_layer(src, shade=True, gpt=None):
     im = Image.open(src).convert('RGBA')
     if im.size != (W, H):
         im = im.resize((W, H), Image.LANCZOS)
@@ -76,6 +77,10 @@ def char_layer(src, shade=True):
         a[..., 3] *= 1 - side * ramp
     if not shade:   # 给 GPT 的输入图：不加我们的阴影
         return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), None
+    if gpt is not None:   # 阴影取自 GPT（第二步 round18）：人物乘 fig，桌面投影层用 shadow
+        fig, shadow = gpt
+        a[..., :3] *= fig
+        return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), shadow
     al = a[..., 3] / 255
     body = (al > 0.5) & (yy >= EDGE - AO_TOP)
     # 环境遮蔽：人物贴近桌面的部分（袖子下沿、袖口、手腕、手的下侧）被桌面挡光，按「往下到人物下沿的距离」压暗，
@@ -167,10 +172,83 @@ def compose_inputs(src, override, desk, out):
         print('wrote', out / f'compose-{key}.png', out / f'mask-{key}.png')
 
 
+def fit_desk(gpt_a, inp_a):
+    """GPT 常把整张轻微缩放、平移（横竖各约 0–1%、几像素）。用书桌轮廓（左右边、上下边）做线性拟合，
+    返回 (sx, sy, dx, dy)：输入图坐标 = s × GPT 坐标 + d。"""
+    def ex(a, rows):
+        out = []
+        for y in rows:
+            xs = np.nonzero(a[y] > 128)[0]
+            out.append((xs.min(), xs.max()) if len(xs) else (np.nan, np.nan))
+        return np.array(out, float).T.ravel()
+    def ey(a, cols, y0):
+        out = []
+        for x in cols:
+            ys = np.nonzero(a[y0:, x] > 128)[0]
+            out.append((ys.min() + y0, ys.max() + y0) if len(ys) else (np.nan, np.nan))
+        return np.array(out, float).T.ravel()
+    rows = np.arange(720, 1020, 10)
+    cols = np.concatenate([np.arange(60, 330, 15), np.arange(1150, 1340, 15)])
+    xg, xi = ex(gpt_a, rows), ex(inp_a, rows)
+    yg, yi = ey(gpt_a, cols, 560), ey(inp_a, cols, 560)
+    ok = ~np.isnan(xg) & ~np.isnan(xi)
+    sx, dx = np.polyfit(xg[ok], xi[ok], 1)
+    ok = ~np.isnan(yg) & ~np.isnan(yi)
+    sy, dy = np.polyfit(yg[ok], yi[ok], 1)
+    return sx, sy, dx, dy
+
+
+def gpt_shading(gpt_path, inp_path, mask_path):
+    """把 GPT 画的接触阴影搬到高清图层上（不直接用 GPT 的像素：它只有 1405 宽，而且整体会变暗）。
+    比值 = 模糊后的 GPT 图 / 模糊后的输入图（先按书桌拟合对齐），再除以人物上半身的整体漂移（GPT 整体变暗的部分）。
+    返回 (fig, shadow)：fig 是人物层（立绘坐标 × S）要乘的系数，只在桌沿附近生效；
+    shadow 是桌面投影层（立绘坐标，半分辨率），页面里正片叠底。"""
+    g = Image.open(gpt_path).convert('RGBA')
+    I = np.asarray(Image.open(inp_path).convert('RGBA')).astype(float)
+    sx, sy, dx, dy = fit_desk(np.asarray(g)[..., 3], I[..., 3])
+    G = np.asarray(g.transform((I.shape[1], I.shape[0]), Image.AFFINE, (1 / sx, 0, -dx / sx, 0, 1 / sy, -dy / sy),
+                               resample=Image.BICUBIC)).astype(float)
+    m = np.asarray(Image.open(mask_path)) > 0
+    yy = np.arange(I.shape[0])[:, None] * np.ones((1, I.shape[1]), int)
+    edge = DESK_BACK + CANVAS_DY
+    blur = lambda x, s: np.stack([ndimage.gaussian_filter(x[..., c], s) for c in range(3)], -1)
+    # 人物上半身的整体漂移（远离桌面，GPT 不该改的地方）
+    upper = ndimage.binary_erosion(m, iterations=8) & (yy < edge - 40)
+    drift = np.median(blur(G, 3)[upper] / np.maximum(blur(I, 3)[upper], 8), axis=0)
+    # 人物身上：只取桌沿附近（上方 25px 渐入），模糊 3px 去掉 GPT 重画线条的细节差，限制在 [0.55, 1]
+    rf = blur(G, 3) / np.maximum(blur(I, 3), 8) / drift
+    w = np.clip((yy - (edge - 25)) / 25, 0, 1)[..., None] * m[..., None]
+    rf = 1 - w * (1 - np.clip(rf, 0.55, 1))
+    # 桌面上（人物外、书桌不透明处）：模糊 1.2px，限制在 [0.4, 1]；书桌远处本来就没变（平均差 2.5），不用除漂移
+    desk = (I[..., 3] > 200) & ~ndimage.binary_dilation(m, iterations=1) & (yy >= edge - 3)
+    rd = np.clip(blur(G, 1.2) / np.maximum(blur(I, 1.2), 8), 0.4, 1)
+    rd[~desk] = 1
+    near = ndimage.gaussian_filter(ndimage.binary_dilation(m, iterations=45).astype(float), 4)[..., None]
+    rd = 1 - near * (1 - rd)
+    # 换到立绘坐标：输入图 (X, Y) = (FIG_X + 250, FIG_Y + CANVAS_DY) + FIG_K × 立绘坐标
+    def to_portrait(f, scale):
+        img = Image.fromarray(np.clip(f * 255, 0, 255).astype('uint8'))
+        k = FIG_K / scale
+        size = (round(W / S * scale), round((H + PAD) / S * scale))
+        out = img.transform(size, Image.AFFINE, (k, 0, FIG_X + 250, 0, k, FIG_Y + CANVAS_DY), resample=Image.BICUBIC,
+                            fillcolor=(255, 255, 255))
+        return np.asarray(out).astype(float) / 255
+    fig = to_portrait(rf, S)
+    f = to_portrait(rd, 1)
+    a = 1 - f.min(-1)                                     # 正片叠底：底色 × (1 − a + a × c) = 底色 × f
+    c = 1 - (1 - f) / np.maximum(a[..., None], 1e-3)
+    shadow = np.zeros(f.shape[:2] + (4,))
+    shadow[..., :3] = np.clip(c, 0, 1) * 255
+    shadow[..., 3] = a * 255
+    print(f'  fit sx {sx:.4f} sy {sy:.4f} dx {dx:+.1f} dy {dy:+.1f}; drift {np.round(drift, 3)}')
+    return fig, Image.fromarray(shadow.astype('uint8'))
+
+
 def main():
     args = sys.argv[1:]
     opt = lambda name: args[args.index(name) + 1] if name in args else None
     src, desk, debug, override = opt('--src'), opt('--desk'), opt('--debug'), opt('--override')
+    shade_from, inputs = opt('--shade-from'), opt('--inputs')   # 第二步：阴影取自 GPT（如 round18），inputs 是对应的输入图目录
     if '--compose' in args:
         compose_inputs(src, override, desk, opt('--compose'))
         return
@@ -183,7 +261,11 @@ def main():
         if override and (Path(override) / f'{name}.png').exists():
             path = Path(override) / f'{name}.png'   # 例如 GPT 改过手的那几张（round16）
         print('source', path.name, '<-', path.parent.name)
-        layer, shadow = char_layer(path)
+        gpt = None
+        if shade_from:
+            gpt = gpt_shading(Path(shade_from) / f'combo-{key}.png', Path(inputs) / f'compose-{key}.png',
+                              Path(inputs) / f'mask-{key}.png')
+        layer, shadow = char_layer(path, gpt=gpt)
         layer.save(DIR / f'char-{key}.png', optimize=True)
         shadow.save(DIR / f'shadow-{key}.png', optimize=True)
         layer.crop(THUMB_BOX).resize((256, 256), Image.LANCZOS).save(DIR / f'thumb-{key}.png', optimize=True)
