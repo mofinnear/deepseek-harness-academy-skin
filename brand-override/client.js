@@ -388,6 +388,8 @@ window.__ModuleLoader__.load({
           if (layered) {
             next.style.transition = 'none';
             next.style.opacity = '1';
+            /* A light pop on the new figure only (skin.css), so the swap does not feel abrupt. */
+            next.classList.add('dsh-academy-pop');
             below.forEach(function (node) { node.remove(); });
             return;
           }
