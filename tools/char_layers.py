@@ -15,6 +15,7 @@
 和 round14 合成图里人物的位置、大小一致（skin.css 合成图段按这个换算）。
 用法：python3 tools/char_layers.py --src <素材目录>/round6/relit3 [--override <素材目录>/round16] [--desk <素材目录>/round15/desk-fixed.png] [--debug <目录>]
 （--override 目录里有同名立绘时优先用它，没有的仍用 --src）
+给 GPT 画光影的输入图：python3 tools/char_layers.py --src … --desk <round15/desk-fixed.png> --compose <素材目录>/round17/输入
 """
 import sys
 from pathlib import Path
@@ -39,7 +40,7 @@ THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前�
 FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶（合成图坐标）
 
 
-def char_layer(src):
+def char_layer(src, shade=True):
     im = Image.open(src).convert('RGBA')
     if im.size != (W, H):
         im = im.resize((W, H), Image.LANCZOS)
@@ -56,6 +57,8 @@ def char_layer(src):
     side = ndimage.gaussian_filter(ndimage.binary_dilation(side, iterations=1).astype(float), 0.8)
     ramp = np.clip((yy - EDGE) / RAMP, 0, 1)
     a[..., 3] *= 1 - side * ramp
+    if not shade:   # 给 GPT 的输入图：只去两侧垂下的头发，不加我们的阴影
+        return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), None
     al = a[..., 3] / 255
     body = (al > 0.5) & (yy >= EDGE - AO_TOP)
     # 环境遮蔽：人物贴近桌面的部分（袖子下沿、袖口、手腕、手的下侧）被桌面挡光，按「往下到人物下沿的距离」压暗，
@@ -96,10 +99,42 @@ def desk_layers(src):
     print('wrote', DIR / 'desk-fixed.png', DIR / 'desk-front.png')
 
 
+def compose_inputs(src, override, desk, out):
+    """给 GPT 画光影用的输入图：固定书桌整张（1405×1120）+ relit3 角色（不加阴影）+ 羽毛笔墨水瓶，
+    和 round14 合成图同一坐标（角色缩放 0.465 / S，左上角 (424, −3)）。同时输出角色蒙版（白 = 角色）。"""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    full = Image.open(desk).convert('RGBA')
+    fa = np.asarray(full).copy()
+    fa[..., 3] = np.where(fa[..., 3] >= 240, 255, fa[..., 3])
+    full = Image.fromarray(fa)
+    x1, y1, x2, y2 = FRONT_BOX
+    front = Image.new('RGBA', full.size, (0, 0, 0, 0))
+    front.paste(full.crop((x1 + 250, y1, x2 + 250, y2)), (x1 + 250, y1))
+    for key, name in SOURCES.items():
+        path = Path(src) / f'{name}.png'
+        if override and (Path(override) / f'{name}.png').exists():
+            path = Path(override) / f'{name}.png'
+        layer, _ = char_layer(path, shade=False)
+        small = layer.resize((round(W * 0.465 / S), round((H + PAD) * 0.465 / S)), Image.LANCZOS)
+        fig = Image.new('RGBA', full.size, (0, 0, 0, 0))
+        fig.paste(small, (424, -3), small)
+        img = full.copy()
+        img.alpha_composite(fig)
+        img.alpha_composite(front)
+        img.save(out / f'compose-{key}.png')
+        mask = np.asarray(fig)[..., 3]
+        Image.fromarray(np.where(mask > 128, 255, 0).astype('uint8')).save(out / f'mask-{key}.png')
+        print('wrote', out / f'compose-{key}.png', out / f'mask-{key}.png')
+
+
 def main():
     args = sys.argv[1:]
     opt = lambda name: args[args.index(name) + 1] if name in args else None
     src, desk, debug, override = opt('--src'), opt('--desk'), opt('--debug'), opt('--override')
+    if '--compose' in args:
+        compose_inputs(src, override, desk, opt('--compose'))
+        return
     if desk:
         desk_layers(desk)
     if not src:
