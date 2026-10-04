@@ -477,7 +477,7 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  transition: opacity 280ms ease;
+  transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,

@@ -381,14 +381,15 @@ window.__ModuleLoader__.load({
           var below = [];
           for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
           /* The old pose fades out too (otherwise it shows through the new pose's
-           * transparent parts and pops off at the end), but starts late: by then
-           * the new pose covers the desk, so the shared desk never dims. */
+           * transparent parts and pops off at the end), starting a beat later so
+           * the shared desk barely dims. Both fades are short (150 ms) because
+           * while two poses overlap the hands and hair show double. */
           window.setTimeout(function () {
             below.forEach(function (node) { node.style.opacity = '0'; });
-          }, 200);
+          }, 70);
           window.setTimeout(function () {
             below.forEach(function (node) { node.remove(); });
-          }, 520);
+          }, 300);
         });
       };
       Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
