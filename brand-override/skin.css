@@ -498,15 +498,42 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
 /* 固定书桌 + 人物层的表情切换是直接替换、没有淡入淡出（client.js selectComboPose）：任何交叉淡入都会透出旧人物，看起来像重影。 */
-/* 换上的人物（连同桌面阴影）轻轻弹一下：放大 1% 再缩回（原来 2%，用户要求试 1%）。书桌和羽毛笔墨水瓶不动。
- * 缩放中心在人物层 50% / 92%：桌面后沿在人物层约 88% 高处，手在它前面，这样贴桌的手和袖子几乎不挪。 */
-@keyframes dsh-academy-pop { 0% { transform: scale(1); } 40% { transform: scale(1.01); } 100% { transform: scale(1); } }
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character,
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-combo-shadow {
-  transform-origin: 50% 92%;
-  animation: dsh-academy-pop 260ms ease-out;
+/* 换表情时：人物轻轻往上顶一下，头部附近闪出三颗小星星。书桌、桌面阴影、羽毛笔墨水瓶不动。星星由 client.js 加进新的一组、动画完删掉。
+ * 「顶」是以人物层底边为中心竖向拉长 0.8%：头顶上移约 3px，压在桌上的手肘和手几乎不动（< 0.2px）。
+ * 不能整体往上平移：手肘离开书页会露出一条白色（书页），用户发现。以前试过放大 2% / 1% 再缩回，用户觉得中规中矩。 */
+@keyframes dsh-academy-hop { 0% { transform: scaleY(1); } 35% { transform: scaleY(1.008); } 70%, 100% { transform: scaleY(1); } }
+@keyframes dsh-academy-twinkle {
+  0% { opacity: 0; transform: scale(0.2) rotate(-40deg); }
+  35% { opacity: 1; transform: scale(1) rotate(0deg); }   /* 最亮时是正的四角星，转成 X 会和背景里的星星混在一起 */
+  100% { opacity: 0; transform: scale(0.4) rotate(40deg); }
 }
-@media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop :is(.dsh-academy-character, .dsh-academy-combo-shadow) { animation: none; } }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character { transform-origin: 50% 100%; animation: dsh-academy-hop 300ms ease-out; }
+/* 星星层和人物层同一位置，星星按人物图的比例摆：头饰右边（便签下面）、右耳外侧、呆毛左边。 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle {
+  position: absolute;
+  top: calc(104px - var(--dsh-ch-h) * 0.0328);
+  left: calc(var(--dsh-ch-x) + var(--dsh-ch-w) * 0.1004);
+  width: calc(var(--dsh-ch-w) * 0.96);
+  height: calc(var(--dsh-ch-h) * 0.9892);
+  pointer-events: none;
+}
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle i {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  opacity: 0;
+  background: var(--dsh-academy-star) center / contain no-repeat;
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px #ffe9a8);
+  animation: dsh-academy-twinkle 480ms ease-out both;
+}
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle i:nth-child(1) { top: 17%; left: 80%; }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle i:nth-child(2) { top: 37%; left: 90%; width: 22px; height: 22px; margin: -11px 0 0 -11px; animation-delay: 90ms; }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle i:nth-child(3) { top: 6%; left: 24%; width: 18px; height: 18px; margin: -9px 0 0 -9px; animation-delay: 170ms; }
+@media (prefers-reduced-motion: reduce) {
+  $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character { animation: none; }
+  $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle { display: none; }
+}
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-desk,

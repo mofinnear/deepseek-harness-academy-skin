@@ -388,8 +388,17 @@ window.__ModuleLoader__.load({
           if (layered) {
             next.style.transition = 'none';
             next.style.opacity = '1';
-            /* A light pop on the new figure only (skin.css), so the swap does not feel abrupt. */
+            /* A small hop of the new figure and a few twinkling stars by the head
+             * (skin.css), so the swap does not feel abrupt. Dropped once done. */
             next.classList.add('dsh-academy-pop');
+            if (next.closest('[data-dsh-academy-rail]')) {
+              var sparkle = document.createElement('div');
+              sparkle.className = 'dsh-academy-sparkle';
+              sparkle.setAttribute('aria-hidden', 'true');
+              sparkle.innerHTML = '<i></i><i></i><i></i>';
+              next.appendChild(sparkle);
+              window.setTimeout(function () { sparkle.remove(); }, 800);
+            }
             below.forEach(function (node) { node.remove(); });
             return;
           }
