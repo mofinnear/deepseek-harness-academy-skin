@@ -30,6 +30,8 @@ S = 2                # relit3 是立绘坐标的 2 倍
 W, H, PAD = 1199 * S, 1312 * S, 40 * S
 
 RAMP = 6 * S         # 去头发时从桌沿往下 6px 过渡
+# 两侧垂下的头发：以前在桌沿以下去掉，结果左边头发在桌沿处被横着切平（用户反馈）。现在不去，让头发自然搭在桌面和后面那本书上（和 round14 一样）
+CUT_SIDE_HAIR = False
 SIDE_L, SIDE_R = 150 * S, 960 * S   # 桌沿以下，这两条线外侧的头发是「两侧垂下的头发」，从这里开始找连通的头发
 # 漫画式阴影：不是盖黑，而是在底色上乘一个偏肉色的暖色（正片叠底），越深的地方越接近乘满这个颜色
 AO_LEN, AO_TOP = 16 * S, 10 * S             # 人物贴桌部分：约 16px 衰减，从桌沿上方 10px 开始
@@ -66,12 +68,13 @@ def char_layer(src, shade=True):
     xx = np.arange(W)[None, :] * np.ones((H + PAD, 1), int)
     hair = (((b > 110) & (b - r > 45) & (b - g > 15)) | ((b > 170) & (b - r > 28) & (b >= g))) & (a[..., 3] > 20)
     low = yy >= EDGE
-    seed = hair & low & ((xx < SIDE_L) | (xx > SIDE_R))
-    side = ndimage.binary_propagation(seed, mask=hair & low)
-    side = ndimage.gaussian_filter(ndimage.binary_dilation(side, iterations=1).astype(float), 0.8)
-    ramp = np.clip((yy - EDGE) / RAMP, 0, 1)
-    a[..., 3] *= 1 - side * ramp
-    if not shade:   # 给 GPT 的输入图：只去两侧垂下的头发，不加我们的阴影
+    if CUT_SIDE_HAIR:
+        seed = hair & low & ((xx < SIDE_L) | (xx > SIDE_R))
+        side = ndimage.binary_propagation(seed, mask=hair & low)
+        side = ndimage.gaussian_filter(ndimage.binary_dilation(side, iterations=1).astype(float), 0.8)
+        ramp = np.clip((yy - EDGE) / RAMP, 0, 1)
+        a[..., 3] *= 1 - side * ramp
+    if not shade:   # 给 GPT 的输入图：不加我们的阴影
         return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), None
     al = a[..., 3] / 255
     body = (al > 0.5) & (yy >= EDGE - AO_TOP)
