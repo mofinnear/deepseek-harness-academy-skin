@@ -42,7 +42,11 @@ SHADOW_MAX = 0.75
 # 贴边窄阴影的颜色（乘色）：取自 GPT round18 手肘下的接触阴影（约 (151,119,106) → (113,76,67)），略浅一点；
 # 四个表情用同一个，切换时贴边阴影深浅一致（各张实测的中位数差很多，不用）
 CONTACT_TINT = (0.80, 0.70, 0.68)
-BROAD_TINT = (0.90, 0.82, 0.80)     # 右下柔和阴影的乘色（GPT 大面积阴影的平均深浅）
+BROAD_TINT = (0.90, 0.82, 0.80)
+# 第三步光泽感：左侧冷白窗光（照着 GPT round19 的样子）
+RIM_COLOR = (205, 238, 255)   # 浅青白
+RIM_W, RIM_K = 10, 0.85       # 亮边：约 10px 衰减，最亮处滤色 85%
+RIM_SOFT, RIM_SOFT_K = 70, 0.30   # 漫射：约 70px 衰减，30%
 THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前合成图缩略图的框是同一处
 FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶所在范围（合成图坐标）
 # 墨水瓶轮廓和插进瓶口的那段笔杆（书桌原图 1405 宽坐标；固定书桌不变，所以用固定多边形）。
@@ -59,6 +63,32 @@ FIG_K = 0.465 * FIG_SCALE # 立绘坐标 → 合成图坐标
 DESK_BACK = 515           # 固定书桌桌面后沿（合成图坐标）
 EDGE = round(((DESK_BACK - FIG_Y) / FIG_K + 3) * S)   # 桌面后沿换成立绘坐标（relit3 原图），加 3px 余量
 CANVAS_DY = 27             # 只用于给 GPT 的输入图：整张画面往下移的像素（角色上提后呆毛会超出画布顶部）
+
+
+def rim_light(a):
+    """第三步光泽感：左边窗户来的冷白光。GPT 画的 round19 有这个效果，但它这一轮把细节重画了不少，按比值搬过来脸会发花，
+    所以照着 round19 的样子用程序画（四张完全一致）：
+    - 亮边：人物每个朝左的轮廓（左边是透明的地方）往里 RIM_W px 内，用滤色叠一层浅青白光，越靠边越亮；
+    - 漫射：往里 RIM_SOFT px 内很淡的一层，让左侧整体通透一点；
+    - 越靠画面左边、越靠上越强（窗在左上），桌沿以下不加。"""
+    al = a[..., 3] / 255
+    inside = al > 0.35
+    h, w = inside.shape
+    # 每个像素往左数连续的人物像素个数（到左边透明处的距离）
+    d = np.zeros((h, w), float)
+    run = np.zeros(h, float)
+    for x in range(w):
+        run = np.where(inside[:, x], run + 1, 0)
+        d[:, x] = run
+    d = ndimage.gaussian_filter(d, 1.0 * S)
+    yy = np.arange(h)[:, None] * np.ones((1, w))
+    xx = np.arange(w)[None, :] * np.ones((h, 1))
+    reach = np.clip(1.15 - xx / (w * 0.75), 0, 1) * np.clip(1.1 - yy / (EDGE * 1.05), 0, 1)
+    rim = np.exp(-d / (RIM_W * S)) * RIM_K + np.exp(-d / (RIM_SOFT * S)) * RIM_SOFT_K
+    rim = ndimage.gaussian_filter(rim * reach * inside, 0.8 * S)[..., None]
+    c = np.array(RIM_COLOR) / 255
+    a[..., :3] = 255 - (255 - a[..., :3]) * (1 - rim * c)   # 滤色
+    return a
 
 
 def char_layer(src, shade=True, gpt=None):
@@ -84,6 +114,7 @@ def char_layer(src, shade=True, gpt=None):
     if gpt is not None:   # 第二步：人物贴桌部分的明暗取自 GPT（round18），桌面阴影的形状按 relit3 轮廓生成
         fig = gpt[0]
         a[..., :3] *= fig
+        a = rim_light(a)   # 第三步：左侧窗光的亮边
         # 桌面阴影不再用 GPT 的比值：GPT 把头发、书页画得和 relit3 不一样，这些差别会变成灰色色块（用户发现两次）。
         # 改为以 relit3 为准：只用桌沿以下、不是头发的部分（手臂、手、袖子）的轮廓，生成贴边窄阴影 + 右下柔和阴影，
         # 颜色取 GPT 手肘下接触阴影的颜色（CONTACT_TINT / BROAD_TINT，四个表情一致）。
@@ -293,6 +324,16 @@ def gpt_shading(gpt_path, inp_path, mask_path):
     f = to_portrait(rd, 1)
     print(f'  fit sx {sx:.4f} sy {sy:.4f} dx {dx:+.1f} dy {dy:+.1f}; drift {np.round(drift, 3)}; contact tint {np.round(tint, 3)}')
     return fig, f, tint
+
+
+def to_portrait(f, scale, fill=255):
+    """输入图坐标（1405×1120，含 CANVAS_DY）的系数图 → 立绘坐标（scale = S 时是人物层分辨率，1 时是半分辨率）。"""
+    img = Image.fromarray(np.clip(f * 255, 0, 255).astype('uint8'))
+    k = FIG_K / scale
+    size = (round(W / S * scale), round((H + PAD) / S * scale))
+    out = img.transform(size, Image.AFFINE, (k, 0, FIG_X + 250, 0, k, FIG_Y + CANVAS_DY), resample=Image.BICUBIC,
+                        fillcolor=(fill, fill, fill))
+    return np.asarray(out).astype(float) / 255
 
 
 def main():
