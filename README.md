@@ -1,6 +1,6 @@
 # DeepSeek Harness「星海书院」皮肤
 
-> **非官方项目**：这是 DeepSeek Harness 桌面版（macOS）的本地皮肤插件，与 DeepSeek 官方无关；只改外观，不修改应用本体和签名。
+> **非官方项目**：这是 DeepSeek Harness 桌面版（macOS / Windows）的本地皮肤插件，与 DeepSeek 官方无关；只改外观，不修改应用本体和签名。
 
 ![星海书院皮肤预览](docs/layout-preview.png)
 
@@ -8,11 +8,11 @@
 
 ## 快速安装
 
-- **只想用**：拿到分享包 `星海书院皮肤-v<版本>.zip`，解压后双击 `安装.command`，再完全退出（`Cmd+Q`）并重新打开 DeepSeek Harness。详细步骤、被系统拦截时的处理、手动安装和卸载见包里的 [`使用说明.md`](share/使用说明.md)。不需要 Node 或 Python。
+- **只想用**：拿到分享包 `星海书院皮肤-v<版本>.zip`，解压后双击 `安装.command`（macOS）或 `安装-Windows.bat`（Windows），再完全退出并重新打开 DeepSeek Harness。Windows 版按应用的 Windows 代码适配（右上角 40px 窗口按钮条让位、PowerShell 安装脚本），还没有在 Windows 实机验证。详细步骤、被系统拦截时的处理、手动安装和卸载见包里的 [`使用说明.md`](share/使用说明.md)。不需要 Node 或 Python。
 - **交给 DeepSeek Harness 安装**：把 `使用说明.md` 拖进对话框，权限切到「完全权限」，让它按说明里「给 AI 助手的安装步骤」安装——它会先备份 `~/.dsh/profiles/desktop` 里要改的两处，装完提醒你 `Cmd+Q` 重开，并告诉你快捷键（`Option+Shift+B` 会隐藏全部界面，再按一次恢复）。
 - **从源码安装**：需要 Node.js（构建时缩放素材还要 Python 3 + Pillow）。在项目目录运行 `node tools/install.mjs --apply`（会先构建），然后重启应用。卸载：`node tools/install.mjs --revert`。
 
-两种方式都只写用户目录里的两处：`~/.dsh/profiles/desktop/node_modules/@local/dsh-logo/`（插件文件）和 `~/.dsh/profiles/desktop/cordis.patch.yml`（追加一条加载项）。
+几种方式都只写用户目录里的两处：`~/.dsh/profiles/desktop/node_modules/@local/dsh-logo/`（插件文件）和 `~/.dsh/profiles/desktop/cordis.patch.yml`（追加一条加载项）；Windows 上 `~` 是 `%USERPROFILE%`。
 
 ## 界面
 
@@ -28,8 +28,8 @@
 | --- | --- |
 | 左侧栏顶部「星海书院 ▾」 | 在皮肤和原版界面之间切换，选择会记住 |
 | 右下角表情缩略图 | 切换表情和台词，选择会记住 |
-| `Option + Shift + F` | 收起 / 展开右侧陪伴栏 |
-| `Option + Shift + B` | 只看背景 |
+| `Option + Shift + F`（Windows：`Alt`） | 收起 / 展开右侧陪伴栏 |
+| `Option + Shift + B`（Windows：`Alt`） | 只看背景（隐藏全部界面，再按一次恢复） |
 
 窗口宽度小于 1100px 时陪伴栏自动隐藏。皮肤开启时注册并选中一个不持久化的浅色主题，关闭皮肤后恢复原来的主题偏好。
 
@@ -47,7 +47,7 @@
 | `tools/devtools.mjs` | 连接调试端口：执行 JS、截图、实时注入 CSS |
 | `tools/char_layers.py` | 生成陪伴栏的人物层、桌面阴影、固定书桌和前景层 |
 | `tools/package_share.sh` | 制作分享包（安装包 + 源码包） |
-| `share/` | 分享包里的一键安装 / 卸载脚本和使用说明 |
+| `share/` | 分享包里的一键安装 / 卸载脚本（macOS `.command`，Windows `.bat` + `windows/*.ps1`）和使用说明 |
 | `docs/交接说明.md` | 项目现状、流程、结构、待办（新会话 / 新协作者先读） |
 | `docs/修改记录.md` | 复现步骤、调试方法、踩坑表、完整版本记录 |
 
