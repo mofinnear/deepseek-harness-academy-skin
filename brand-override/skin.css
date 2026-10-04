@@ -465,7 +465,11 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  * 「固定书桌 + 人物层」（陪伴栏带 data-layered，第九步）：每个表情一组 = 书桌 desk-fixed（截在栏内）+ 人物层 + 前景，整组交叉渐变；
  * 人物层 char-*（tools/char_layers.py 由 relit3 立绘生成）不截，伸出栏外的头发直接盖住对话框，不再需要头发条。
  * 人物层是立绘坐标（1199×1312，底部多 40px 放阴影，共 1352），按立绘框放：左 = 立绘左，宽 = 立绘宽，
- * 上 = 合成图上沿 − 3 / 1120 × 合成图高（立绘左上角在合成图 (174, −3)），高 = 立绘高 × 1352 / 1312。
+ * 摆放参数在 tools/char_layers.py：立绘左上角在合成图 (FIG_X, FIG_Y) = (230, −17)，缩放 FIG_SCALE = 0.96
+ * （用户手动调过：比 round14 缩小 4%、上提，否则腰露在桌面上、像从桌子里长出来）。合成图 1px = 0.0017936 × 立绘宽（横）
+ * = 0.0016391 × 立绘高（竖），所以：左 = 合成图左 + 230 × 0.0017936 × 立绘宽 = --dsh-ch-x + 0.1004 × 立绘宽；
+ * 宽 = 1199 × 0.465 × 0.96 × 0.0017936 × 立绘宽 = 0.96 × 立绘宽；上 = 合成图上沿 − 17 × 0.0016391 × 立绘高；
+ * 高 = 1352 × 0.465 × 0.96 × 0.0016391 × 立绘高 = 0.9892 × 立绘高。改参数时这四个数要一起改。
  * 书桌 desk-fixed 和羽毛笔、墨水瓶 desk-front 是合成图坐标（1000×1120），和以前的合成图同一位置。 */
 $SKIN [data-dsh-academy-rail][data-combo],
 $SKIN [data-dsh-academy-desk-back] {
@@ -511,10 +515,10 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-front {
 }
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-shadow {
-  top: calc(104px - var(--dsh-ch-h) * 0.0098);
-  left: var(--dsh-ch-x);
-  width: var(--dsh-ch-w);
-  height: calc(var(--dsh-ch-h) * 1.0305);
+  top: calc(104px - var(--dsh-ch-h) * 0.0328);   /* 合成图上沿（104px − 0.0049 × 立绘高）− 17 × 0.0016391 × 立绘高 */
+  left: calc(var(--dsh-ch-x) + var(--dsh-ch-w) * 0.1004);
+  width: calc(var(--dsh-ch-w) * 0.96);
+  height: calc(var(--dsh-ch-h) * 0.9892);
   clip-path: none;
 }
 /* 桌面投影（shadow-*.png，和人物层同一位置、半分辨率）：偏肉色的乘色，正片叠底到书桌上，像漫画的阴影而不是一层黑 */

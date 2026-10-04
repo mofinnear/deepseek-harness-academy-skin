@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy import ndimage
 
 DIR = Path(__file__).resolve().parent.parent / 'assets' / 'combo'
@@ -37,15 +37,21 @@ AO_TINT = (0.93, 0.80, 0.80)                 # 乘满时：肤色 (250,215,195) 
 SHADOW_TINT = (214, 160, 150)                # 桌面投影的乘色（页面里 mix-blend-mode: multiply），米色书页上约 (206,160,136)
 SHADOW_MAX = 0.75
 THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前合成图缩略图的框是同一处
-FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶（合成图坐标）
+FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶所在范围（合成图坐标）
+# 墨水瓶轮廓和插进瓶口的那段笔杆（书桌原图 1405 宽坐标；固定书桌不变，所以用固定多边形）。
+# 前景层只取物件本身：以前取整个矩形，角色右移后矩形里的木纹会盖住袖子和头发（竖着切一刀）
+INKWELL = [(906, 527), (912, 523), (925, 522), (940, 522), (947, 526), (946, 534), (941, 540), (951, 543), (959, 548),
+           (964, 556), (964, 576), (968, 584), (967, 592), (958, 599), (940, 601), (905, 601), (887, 597), (883, 590),
+           (886, 583), (889, 576), (890, 556), (895, 547), (904, 543), (909, 540), (906, 534)]
+QUILL_SHAFT = [(925, 504), (946, 504), (938, 527), (926, 527)]
 # 角色在书桌上的摆放（只改这三个数；陪伴栏的 skin.css 合成图段要按同样的数换算，见那里的注释）
-FIG_X, FIG_Y = 174, -28   # 立绘左上角在合成图里的位置。round14 是 (174, −3)；relit3 的身体比 round14 长约 25px，
+FIG_X, FIG_Y = 230, -17   # 立绘左上角在合成图里的位置。round14 是 (174, −3)；relit3 的身体比 round14 长约 25px，
                           # 放在 −3 时腰和衬衫下摆露在桌面上、像从桌子里长出来（用户反馈），上提 25px
-FIG_SCALE = 1.0           # 角色相对 round14 的缩放（1.0 = 立绘坐标 × 0.465）
+FIG_SCALE = 0.96           # 角色相对 round14 的缩放（1.0 = 立绘坐标 × 0.465）
 FIG_K = 0.465 * FIG_SCALE # 立绘坐标 → 合成图坐标
 DESK_BACK = 515           # 固定书桌桌面后沿（合成图坐标）
 EDGE = round(((DESK_BACK - FIG_Y) / FIG_K + 3) * S)   # 桌面后沿换成立绘坐标（relit3 原图），加 3px 余量
-CANVAS_DY = 0             # 只用于给 GPT 的输入图：整张画面往下移的像素（角色上提后呆毛会超出画布顶部）
+CANVAS_DY = 27             # 只用于给 GPT 的输入图：整张画面往下移的像素（角色上提后呆毛会超出画布顶部）
 
 
 def char_layer(src, shade=True):
@@ -93,17 +99,39 @@ def char_layer(src, shade=True):
     return layer, shadow
 
 
+def front_mask(full):
+    """羽毛笔 + 墨水瓶的形状（书桌原图 1405×1120 坐标）。羽毛笔：桌面后沿以上书桌图里不透明的部分
+    （去掉后沿那条细边）；墨水瓶和瓶口笔杆：固定多边形。"""
+    a = np.asarray(full)[..., 3]
+    h, w = a.shape
+    yy = np.arange(h)[:, None] * np.ones((1, w), int)
+    xx = np.arange(w)[None, :] * np.ones((h, 1), int)
+    x1, y1, x2, y2 = FRONT_BOX
+    box = (xx >= x1 + 250) & (xx < x2 + 250) & (yy >= y1) & (yy < y2)
+    quill = (a > 20) & (yy < DESK_BACK - 3) & box
+    quill = ndimage.binary_propagation(ndimage.binary_opening(quill, iterations=3), mask=quill)
+    poly = Image.new('L', (w, h), 0)
+    for pts in (INKWELL, QUILL_SHAFT):
+        ImageDraw.Draw(poly).polygon(pts, fill=255)
+    m = quill | (np.asarray(poly) > 0)
+    return ndimage.gaussian_filter(m.astype(float), 0.6)   # 软边，0–1
+
+
+def front_layer(full):
+    a = np.asarray(full).astype(float).copy()
+    a[..., 3] *= front_mask(full)
+    return Image.fromarray(a.astype('uint8'))
+
+
 def desk_layers(src):
     d = Image.open(src).convert('RGBA')
     if d.size != (1405, 1120):
         raise SystemExit(f'desk 尺寸应为 1405×1120，实际 {d.size}')
-    a = np.asarray(d.crop((250, 0, 1250, 1120))).copy()
+    a = np.asarray(d).copy()
     a[..., 3] = np.where(a[..., 3] >= 240, 255, a[..., 3])   # GPT 给的主体 alpha 是 245–254
-    Image.fromarray(a).save(DIR / 'desk-fixed.png', optimize=True)
-    front = np.zeros_like(a)
-    x1, y1, x2, y2 = FRONT_BOX
-    front[y1:y2, x1:x2] = a[y1:y2, x1:x2]
-    Image.fromarray(front).save(DIR / 'desk-front.png', optimize=True)
+    full = Image.fromarray(a)
+    full.crop((250, 0, 1250, 1120)).save(DIR / 'desk-fixed.png', optimize=True)
+    front_layer(full).crop((250, 0, 1250, 1120)).save(DIR / 'desk-front.png', optimize=True)
     print('wrote', DIR / 'desk-fixed.png', DIR / 'desk-front.png')
 
 
@@ -117,9 +145,7 @@ def compose_inputs(src, override, desk, out):
     fa = np.asarray(full).copy()
     fa[..., 3] = np.where(fa[..., 3] >= 240, 255, fa[..., 3])
     full = Image.fromarray(fa)
-    x1, y1, x2, y2 = FRONT_BOX
-    front = Image.new('RGBA', full.size, (0, 0, 0, 0))
-    front.paste(full.crop((x1 + 250, y1, x2 + 250, y2)), (x1 + 250, y1))
+    front = front_layer(full)
     for key, name in SOURCES.items():
         path = Path(src) / f'{name}.png'
         if override and (Path(override) / f'{name}.png').exists():
