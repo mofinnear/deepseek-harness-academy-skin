@@ -498,9 +498,9 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
 /* 固定书桌 + 人物层的表情切换是直接替换、没有淡入淡出（client.js selectComboPose）：任何交叉淡入都会透出旧人物，看起来像重影。 */
-/* 换上的人物（连同桌面阴影）轻轻弹一下：放大 2% 再缩回。书桌和羽毛笔墨水瓶不动。
+/* 换上的人物（连同桌面阴影）轻轻弹一下：放大 1% 再缩回（原来 2%，用户要求试 1%）。书桌和羽毛笔墨水瓶不动。
  * 缩放中心在人物层 50% / 92%：桌面后沿在人物层约 88% 高处，手在它前面，这样贴桌的手和袖子几乎不挪。 */
-@keyframes dsh-academy-pop { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@keyframes dsh-academy-pop { 0% { transform: scale(1); } 40% { transform: scale(1.01); } 100% { transform: scale(1); } }
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-combo-shadow {
   transform-origin: 50% 92%;
