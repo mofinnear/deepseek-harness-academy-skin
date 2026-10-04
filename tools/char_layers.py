@@ -39,6 +39,9 @@ AO_LEN, AO_TOP = 16 * S, 10 * S             # 人物贴桌部分：约 16px 衰�
 AO_TINT = (0.93, 0.80, 0.80)                 # 乘满时：肤色 (250,215,195) → 约 (232,172,156)，白袖口变成浅粉灰
 SHADOW_TINT = (214, 160, 150)                # 桌面投影的乘色（页面里 mix-blend-mode: multiply），米色书页上约 (206,160,136)
 SHADOW_MAX = 0.75
+# 贴边窄阴影的颜色（乘色）：取自 GPT round18 手肘下的接触阴影（约 (151,119,106) → (113,76,67)），略浅一点；
+# 四个表情用同一个，切换时贴边阴影深浅一致（各张实测的中位数差很多，不用）
+CONTACT_TINT = (0.80, 0.70, 0.68)
 THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前合成图缩略图的框是同一处
 FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶所在范围（合成图坐标）
 # 墨水瓶轮廓和插进瓶口的那段笔杆（书桌原图 1405 宽坐标；固定书桌不变，所以用固定多边形）。
@@ -77,10 +80,23 @@ def char_layer(src, shade=True, gpt=None):
         a[..., 3] *= 1 - side * ramp
     if not shade:   # 给 GPT 的输入图：不加我们的阴影
         return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), None
-    if gpt is not None:   # 阴影取自 GPT（第二步 round18）：人物乘 fig，桌面投影层用 shadow
-        fig, shadow = gpt
+    if gpt is not None:   # 阴影取自 GPT（第二步 round18）
+        fig, f, tint = gpt
         a[..., :3] *= fig
-        return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), shadow
+        # 贴边的窄阴影：沿高清人物轮廓（桌沿以下）往右下偏一点、模糊 2.5px，颜色用 GPT 接触处的颜色；
+        # 和 GPT 的大面积阴影取较深的一个（不叠加），边缘和袖子严丝合缝
+        al = a[..., 3] / 255
+        low_body = ((al > 0.5) & low).astype(float)
+        c = ndimage.gaussian_filter(ndimage.shift(low_body, (2 * S, 1 * S), order=0), 2.5 * S) * (1 - al) * low
+        c = np.asarray(Image.fromarray((np.clip(c, 0, 1) * 255).astype('uint8')).resize((W // S, (H + PAD) // S),
+                                                                                       Image.LANCZOS)) / 255
+        f = np.minimum(f, 1 - np.clip(c * 1.3, 0, 1)[..., None] * (1 - np.asarray(CONTACT_TINT)))
+        sa = 1 - f.min(-1)                                 # 正片叠底：底色 × (1 − a + a × col) = 底色 × f
+        col = 1 - (1 - f) / np.maximum(sa[..., None], 1e-3)
+        shadow = np.zeros(f.shape[:2] + (4,))
+        shadow[..., :3] = np.clip(col, 0, 1) * 255
+        shadow[..., 3] = sa * 255
+        return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), Image.fromarray(shadow.astype('uint8'))
     al = a[..., 3] / 255
     body = (al > 0.5) & (yy >= EDGE - AO_TOP)
     # 环境遮蔽：人物贴近桌面的部分（袖子下沿、袖口、手腕、手的下侧）被桌面挡光，按「往下到人物下沿的距离」压暗，
@@ -198,11 +214,27 @@ def fit_desk(gpt_a, inp_a):
     return sx, sy, dx, dy
 
 
+def fill_from(f, valid, region, sigma=3, rounds=6):
+    """region 里 valid 以外的像素，用附近 valid 像素的加权平均一圈圈填上（归一化高斯卷积）。"""
+    f = f.copy()
+    have = valid.astype(float)
+    for _ in range(rounds):
+        todo = region & (have < 1)
+        if not todo.any():
+            break
+        num = np.stack([ndimage.gaussian_filter(f[..., c] * have, sigma) for c in range(f.shape[-1])], -1)
+        den = ndimage.gaussian_filter(have, sigma)
+        ok = todo & (den > 0.05)
+        f[ok] = num[ok] / den[ok][:, None]
+        have = np.where(ok, 1.0, have)
+    return f
+
+
 def gpt_shading(gpt_path, inp_path, mask_path):
     """把 GPT 画的接触阴影搬到高清图层上（不直接用 GPT 的像素：它只有 1405 宽，而且整体会变暗）。
     比值 = 模糊后的 GPT 图 / 模糊后的输入图（先按书桌拟合对齐），再除以人物上半身的整体漂移（GPT 整体变暗的部分）。
-    返回 (fig, shadow)：fig 是人物层（立绘坐标 × S）要乘的系数，只在桌沿附近生效；
-    shadow 是桌面投影层（立绘坐标，半分辨率），页面里正片叠底。"""
+    返回 (fig, f, tint)：fig 是人物层（立绘坐标 × S）要乘的系数，只在桌沿附近生效；
+    f 是桌面上大面积阴影的系数（立绘坐标，半分辨率）；tint 是接触处的阴影色，char_layer 用它沿高清轮廓画贴边的窄阴影。"""
     g = Image.open(gpt_path).convert('RGBA')
     I = np.asarray(Image.open(inp_path).convert('RGBA')).astype(float)
     sx, sy, dx, dy = fit_desk(np.asarray(g)[..., 3], I[..., 3])
@@ -216,12 +248,22 @@ def gpt_shading(gpt_path, inp_path, mask_path):
     upper = ndimage.binary_erosion(m, iterations=8) & (yy < edge - 40)
     drift = np.median(blur(G, 3)[upper] / np.maximum(blur(I, 3)[upper], 8), axis=0)
     # 人物身上：只取桌沿附近（上方 25px 渐入），模糊 3px 去掉 GPT 重画线条的细节差，限制在 [0.55, 1]
-    rf = blur(G, 3) / np.maximum(blur(I, 3), 8) / drift
+    rf = np.clip(blur(G, 3) / np.maximum(blur(I, 3), 8) / drift, 0.55, 1)
+    # 人物轮廓 4px 内 GPT 和高清图对不严（差 1–4px），比值不可靠：用里面的值填过去
+    rf = fill_from(rf, ndimage.binary_erosion(m, iterations=4), m)
     w = np.clip((yy - (edge - 25)) / 25, 0, 1)[..., None] * m[..., None]
-    rf = 1 - w * (1 - np.clip(rf, 0.55, 1))
+    rf = 1 - w * (1 - rf)
     # 桌面上（人物外、书桌不透明处）：模糊 1.2px，限制在 [0.4, 1]；书桌远处本来就没变（平均差 2.5），不用除漂移
-    desk = (I[..., 3] > 200) & ~ndimage.binary_dilation(m, iterations=1) & (yy >= edge - 3)
+    desk = (I[..., 3] > 200) & (yy >= edge - 3)
     rd = np.clip(blur(G, 1.2) / np.maximum(blur(I, 1.2), 8), 0.4, 1)
+    # 紧贴人物轮廓 4px 内同样对不严：用外侧的阴影值往里填，一直填到人物下面，否则袖子下沿会露出一道没压暗的亮线（用户发现）
+    valid = desk & ~ndimage.binary_dilation(m, iterations=4)
+    rd = fill_from(rd, valid, desk)
+    # 接触处的颜色：人物轮廓外 5–9px 那一圈的中位数（交给 char_layer 做贴边的那条窄阴影）
+    band = valid & ndimage.binary_dilation(m, iterations=9) & (yy >= edge + 5)
+    tint = np.clip(np.median(rd[band], axis=0), 0.55, 0.95) if band.any() else np.array([0.78, 0.68, 0.64])
+    # 大面积的阴影只要形状和颜色：再模糊 5px，去掉 GPT 重画木纹带来的斑驳（用户发现过渡不均）
+    rd = np.stack([ndimage.gaussian_filter(rd[..., c], 5) for c in range(3)], -1)
     rd[~desk] = 1
     near = ndimage.gaussian_filter(ndimage.binary_dilation(m, iterations=45).astype(float), 4)[..., None]
     rd = 1 - near * (1 - rd)
@@ -235,13 +277,8 @@ def gpt_shading(gpt_path, inp_path, mask_path):
         return np.asarray(out).astype(float) / 255
     fig = to_portrait(rf, S)
     f = to_portrait(rd, 1)
-    a = 1 - f.min(-1)                                     # 正片叠底：底色 × (1 − a + a × c) = 底色 × f
-    c = 1 - (1 - f) / np.maximum(a[..., None], 1e-3)
-    shadow = np.zeros(f.shape[:2] + (4,))
-    shadow[..., :3] = np.clip(c, 0, 1) * 255
-    shadow[..., 3] = a * 255
-    print(f'  fit sx {sx:.4f} sy {sy:.4f} dx {dx:+.1f} dy {dy:+.1f}; drift {np.round(drift, 3)}')
-    return fig, Image.fromarray(shadow.astype('uint8'))
+    print(f'  fit sx {sx:.4f} sy {sy:.4f} dx {dx:+.1f} dy {dy:+.1f}; drift {np.round(drift, 3)}; contact tint {np.round(tint, 3)}')
+    return fig, f, tint
 
 
 def main():
