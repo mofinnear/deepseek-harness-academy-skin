@@ -369,6 +369,11 @@ window.__ModuleLoader__.load({
         }
         if (current.getAttribute('src') === entry.src) return;
         var next = pose.cloneNode(true);
+        /* The pose being cloned carries the last switch's pop class (and maybe its
+         * stars): left on, the hop would start at insertion while the clone is
+         * still hidden and decoding, so it was often over before the reveal. */
+        next.classList.remove('dsh-academy-pop');
+        next.querySelectorAll('.dsh-academy-sparkle').forEach(function (node) { node.remove(); });
         images = images.concat(setSources(next));
         next.style.opacity = '0';
         pose.after(next);
