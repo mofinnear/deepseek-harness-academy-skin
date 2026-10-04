@@ -30,6 +30,7 @@ chmod +x "$PKG/安装.command" "$PKG/卸载.command"
 if [ -n "$PREVIEW" ]; then
   mkdir -p "$PKG/预览"
   find "$PREVIEW" -maxdepth 1 -type f ! -name '.*' -exec cp {} "$PKG/预览/" \;
+  chmod 644 "$PKG/预览/"*   # 外置盘（exFAT）上拷来的文件权限是 rwx------
 fi
 rm -f "$OUT/$NAME.zip" "$OUT/$NAME-源码.zip"
 (cd "$STAGE" && zip -qrX "$OUT/$NAME.zip" "$NAME" -x '*.DS_Store')
