@@ -42,6 +42,7 @@ SHADOW_MAX = 0.75
 # 贴边窄阴影的颜色（乘色）：取自 GPT round18 手肘下的接触阴影（约 (151,119,106) → (113,76,67)），略浅一点；
 # 四个表情用同一个，切换时贴边阴影深浅一致（各张实测的中位数差很多，不用）
 CONTACT_TINT = (0.80, 0.70, 0.68)
+BROAD_TINT = (0.90, 0.82, 0.80)     # 右下柔和阴影的乘色（GPT 大面积阴影的平均深浅）
 THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前合成图缩略图的框是同一处
 FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶所在范围（合成图坐标）
 # 墨水瓶轮廓和插进瓶口的那段笔杆（书桌原图 1405 宽坐标；固定书桌不变，所以用固定多边形）。
@@ -80,18 +81,23 @@ def char_layer(src, shade=True, gpt=None):
         a[..., 3] *= 1 - side * ramp
     if not shade:   # 给 GPT 的输入图：不加我们的阴影
         return Image.fromarray(np.clip(a, 0, 255).astype('uint8')), None
-    if gpt is not None:   # 阴影取自 GPT（第二步 round18）
-        fig, f, tint = gpt
+    if gpt is not None:   # 第二步：人物贴桌部分的明暗取自 GPT（round18），桌面阴影的形状按 relit3 轮廓生成
+        fig = gpt[0]
         a[..., :3] *= fig
-        # 贴边的窄阴影：沿高清人物轮廓（桌沿以下）往右下偏一点、模糊 2.5px，颜色用 GPT 接触处的颜色；
-        # 和 GPT 的大面积阴影取较深的一个（不叠加），边缘和袖子严丝合缝
+        # 桌面阴影不再用 GPT 的比值：GPT 把头发、书页画得和 relit3 不一样，这些差别会变成灰色色块（用户发现两次）。
+        # 改为以 relit3 为准：只用桌沿以下、不是头发的部分（手臂、手、袖子）的轮廓，生成贴边窄阴影 + 右下柔和阴影，
+        # 颜色取 GPT 手肘下接触阴影的颜色（CONTACT_TINT / BROAD_TINT，四个表情一致）。
         al = a[..., 3] / 255
-        low_body = ((al > 0.5) & low).astype(float)
-        c = ndimage.gaussian_filter(ndimage.shift(low_body, (2 * S, 1 * S), order=0), 2.5 * S) * (1 - al) * low
-        c = np.asarray(Image.fromarray((np.clip(c, 0, 1) * 255).astype('uint8')).resize((W // S, (H + PAD) // S),
-                                                                                       Image.LANCZOS)) / 255
-        f = np.minimum(f, 1 - np.clip(c * 1.3, 0, 1)[..., None] * (1 - np.asarray(CONTACT_TINT)))
-        f[f.min(-1) > 0.985] = 1                           # 压暗不到 1.5% 的极淡部分去掉，免得留下浅色方块
+        body = ((al > 0.5) & low & ~hair).astype(float)
+        out = (1 - al) * low
+        def soft(dy, dx, sigma):
+            m = ndimage.gaussian_filter(ndimage.shift(body, (dy * S, dx * S), order=0), sigma * S) * out
+            return np.asarray(Image.fromarray((np.clip(m, 0, 1) * 255).astype('uint8')).resize(
+                (W // S, (H + PAD) // S), Image.LANCZOS)) / 255
+        c = np.clip(soft(2, 1, 2.5) * 1.3, 0, 1)[..., None]
+        w = np.clip(soft(10, 7, 10) * 1.2, 0, 1)[..., None]
+        f = (1 - c * (1 - np.asarray(CONTACT_TINT))) * (1 - w * (1 - np.asarray(BROAD_TINT)))
+        f[f.min(-1) > 0.985] = 1
         sa = 1 - f.min(-1)                                 # 正片叠底：底色 × (1 − a + a × col) = 底色 × f
         col = 1 - (1 - f) / np.maximum(sa[..., None], 1e-3)
         shadow = np.zeros(f.shape[:2] + (4,))
@@ -258,7 +264,10 @@ def gpt_shading(gpt_path, inp_path, mask_path):
     desk = (I[..., 3] > 200) & (yy >= edge - 3)
     rd = np.clip(blur(G, 1.2) / np.maximum(blur(I, 1.2), 8), 0.4, 1)
     # 紧贴人物轮廓 4px 内同样对不严：用外侧的阴影值往里填，一直填到人物下面，否则袖子下沿会露出一道没压暗的亮线（用户发现）
-    valid = desk & ~ndimage.binary_dilation(m, iterations=4)
+    # 以 relit3 人物为准：GPT 画头发的地方（比输入图明显偏蓝）不是阴影，是它把头发画到了别处，不能当阴影用
+    gpt_hair = ((G[..., 2] - G[..., 0]) - (I[..., 2] - I[..., 0]) > 25) | ((G[..., 2] - G[..., 0] > 40) & (G[..., 2] > 110))
+    gpt_hair = ndimage.binary_dilation(gpt_hair, iterations=3)
+    valid = desk & ~ndimage.binary_dilation(m, iterations=4) & ~gpt_hair
     rd = fill_from(rd, valid, desk)
     # 接触处的颜色：人物轮廓外 5–9px 那一圈的中位数（交给 char_layer 做贴边的那条窄阴影）
     band = valid & ndimage.binary_dilation(m, iterations=9) & (yy >= edge + 5)
@@ -266,7 +275,11 @@ def gpt_shading(gpt_path, inp_path, mask_path):
     # 大面积的阴影只要形状和颜色：再模糊 5px，去掉 GPT 重画木纹带来的斑驳（用户发现过渡不均）
     rd = np.stack([ndimage.gaussian_filter(rd[..., c], 5) for c in range(3)], -1)
     rd[~desk] = 1
-    near = ndimage.gaussian_filter(ndimage.binary_dilation(m, iterations=45).astype(float), 4)[..., None]
+    # 阴影只留在 relit3 人物压在桌上的部分（桌沿以下、不是头发）附近 30px 内；别处 GPT 的差异（头发、重画的书页）不要
+    Ir, Ig, Ib = I[..., 0], I[..., 1], I[..., 2]
+    inp_hair = (Ib - Ir > 40) & (Ib > 110)
+    body_low = m & ~inp_hair & (yy >= edge)
+    near = ndimage.gaussian_filter(ndimage.binary_dilation(body_low, iterations=30).astype(float), 5)[..., None]
     rd = 1 - near * (1 - rd)
     # 换到立绘坐标：输入图 (X, Y) = (FIG_X + 250, FIG_Y + CANVAS_DY) + FIG_K × 立绘坐标
     def to_portrait(f, scale):
