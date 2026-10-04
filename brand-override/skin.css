@@ -462,7 +462,8 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  * 合成图截在陪伴栏里（书桌不能盖到对话框上）；伸出栏外盖住对话框的只有头发：
  * assets/combo/hair-*.png 是合成图左侧 x 0–270、y 0–700 的一条，桌面以下只留发丝（tools/combo_hair.py），
  * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。 */
-$SKIN [data-dsh-academy-rail][data-combo] {
+$SKIN [data-dsh-academy-rail][data-combo],
+$SKIN [data-dsh-academy-desk-back] {
   --dsh-ch-h: calc(63vh - 70px);
   --dsh-ch-w: calc(var(--dsh-ch-h) * 0.9139);
   /* 和立绘一样居中，但不能再往左：桌沿附近的袖子（合成图裁切后 x≈222）必须留在陪伴栏里，
@@ -471,14 +472,16 @@ $SKIN [data-dsh-academy-rail][data-combo] {
   --dsh-ch-x: max(calc(-64px + (var(--dsh-rail-w) + 70px) / 2 - var(--dsh-ch-w) / 2), calc(var(--dsh-ch-w) * -0.0556));
   --dsh-combo-rail-x: calc(var(--dsh-ch-w) * 0.3121 - var(--dsh-ch-x)); /* 陪伴栏左边在合成图元素里的横坐标 */
 }
-$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose {
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose,
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   position: absolute;
   inset: 0;
   pointer-events: none;
   transition: opacity 280ms ease;
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
-$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-character {
   position: absolute;
   top: calc(104px - var(--dsh-ch-h) * 0.0049);
   bottom: auto;
@@ -498,7 +501,26 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
   height: calc(var(--dsh-ch-h) * 1.1474);  /* 700 / 1120 × 合成图高 */
   clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x)) 0 0);
 }
-@media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose { transition: none; } }
+/* 对话框下面的桌子层：同一张合成图，只显示陪伴栏左边以外的部分，桌子一直延伸到对话框下面。
+ * z-index 0：在全窗口背景（body::before，同为 0、排在前面）之上，对话列（1）之下。 */
+[data-dsh-academy-desk-back] {
+  position: fixed;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--dsh-rail-w);
+  pointer-events: none;
+}
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-character {
+  width: calc(var(--dsh-ch-w) * 1.7936);
+  height: calc(var(--dsh-ch-h) * 1.8358);
+  clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x)) 0 0);
+}
+body:not([data-dsh-anime-skin="active"]) [data-dsh-academy-desk-back],
+body[data-dsh-anime-skin-stage="focus"] [data-dsh-academy-desk-back],
+$SKIN:not(:has([data-rightbar-collapsed="true"])) [data-dsh-academy-desk-back] { display: none; }
+@media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose, $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose { transition: none; } }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; } /* 和以前 @art desk 段一致 */
 
 .dsh-academy-bubble {
@@ -571,6 +593,7 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; }
 /* 窄窗口：收起右栏，对话框占满 */
 @media (max-width: 1100px) {
   [data-dsh-academy-rail] { display: none; }
+  [data-dsh-academy-desk-back] { display: none; }
   $SKIN div:has(> [data-slot="main"]) { padding-right: 14px !important; }
 }
 

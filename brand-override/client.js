@@ -221,6 +221,7 @@ window.__ModuleLoader__.load({
             skinTokenCount = 0;
           }
           document.querySelector('[data-dsh-academy-rail]')?.remove();
+          document.querySelector('[data-dsh-academy-desk-back]')?.remove();
           SIDEBAR_DECOR.forEach(function (attr) { document.querySelector('[' + attr + ']')?.remove(); });
         }
         applyAcademySidebarSkin(enabled);
@@ -333,40 +334,62 @@ window.__ModuleLoader__.load({
 
     /**
      * Combo art carries the desk, so a pose never fades to empty: the new pose
-     * (combo image + hair strip) is stacked on top, faded in once decoded, and
-     * the poses below it are dropped.
+     * is stacked on top, faded in once decoded, and the poses below it fade out
+     * and are dropped. Two containers hold poses: the rail (combo art + hair
+     * strip, above the chat panel) and the desk layer behind the chat panel
+     * (combo art only); both switch together.
      */
+    var comboPreload = [];
+
     function selectComboPose(rail, entry) {
-      var poses = rail.querySelectorAll('.dsh-academy-pose');
-      var pose = poses[poses.length - 1];
-      var current = pose.querySelector('.dsh-academy-character');
-      if (!current.getAttribute('src')) {
-        current.src = entry.src;
-        pose.querySelector('.dsh-academy-hair').src = entry.hair;
-        return;
-      }
-      if (current.getAttribute('src') === entry.src) return;
-      var next = pose.cloneNode(true);
-      var images = [next.querySelector('.dsh-academy-character'), next.querySelector('.dsh-academy-hair')];
-      images[0].src = entry.src;
-      images[1].src = entry.hair;
-      next.style.opacity = '0';
-      pose.after(next);
+      var layers = [rail, document.querySelector('[data-dsh-academy-desk-back]')].filter(Boolean);
+      var setSources = function (pose) {
+        var images = [];
+        pose.querySelectorAll('img').forEach(function (img) {
+          img.src = img.classList.contains('dsh-academy-hair') ? entry.hair : entry.src;
+          images.push(img);
+        });
+        return images;
+      };
+      var fresh = [];
+      var images = [];
+      layers.forEach(function (layer) {
+        var poses = layer.querySelectorAll('.dsh-academy-pose');
+        var pose = poses[poses.length - 1];
+        if (!pose) return;
+        var current = pose.querySelector('.dsh-academy-character');
+        if (!current.getAttribute('src')) {
+          setSources(pose);
+          return;
+        }
+        if (current.getAttribute('src') === entry.src) return;
+        var next = pose.cloneNode(true);
+        images = images.concat(setSources(next));
+        next.style.opacity = '0';
+        pose.after(next);
+        fresh.push(next);
+      });
+      if (!fresh.length) return;
       var reveal = function () {
-        /* Not requestAnimationFrame: it never fires while the window is hidden,
-         * and the timer below would then drop the visible pose. A forced layout
-         * commits opacity 0 first, so setting 1 still transitions. */
-        void next.offsetWidth;
-        next.style.opacity = '1';
-        window.setTimeout(function () {
-          /* Only drop poses stacked below this one, so a quicker later pick survives. */
-          var prev = next.previousElementSibling;
-          while (prev && prev.classList.contains('dsh-academy-pose')) {
-            var older = prev.previousElementSibling;
-            prev.remove();
-            prev = older;
-          }
-        }, 400);
+        fresh.forEach(function (next) {
+          /* Not requestAnimationFrame: it never fires while the window is hidden,
+           * and the timers below would then drop the visible pose. A forced layout
+           * commits opacity 0 first, so setting 1 still transitions. */
+          void next.offsetWidth;
+          next.style.opacity = '1';
+          /* Only poses stacked below this one, so a quicker later pick survives. */
+          var below = [];
+          for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
+          /* The old pose fades out too (otherwise it shows through the new pose's
+           * transparent parts and pops off at the end), but starts late: by then
+           * the new pose covers the desk, so the shared desk never dims. */
+          window.setTimeout(function () {
+            below.forEach(function (node) { node.style.opacity = '0'; });
+          }, 200);
+          window.setTimeout(function () {
+            below.forEach(function (node) { node.remove(); });
+          }, 520);
+        });
       };
       Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
     }
@@ -462,6 +485,34 @@ window.__ModuleLoader__.load({
       [deskBooks, deskGlobe].forEach(function (node) { node.setAttribute('aria-hidden', 'true'); });
       rail.append(memo, sparkles, bigStar, desk, deskBooks, deskGlobe, character, bubble, picker);
       document.body.appendChild(rail);
+      if (skinAssets.combo) {
+        /* Desk layer behind the chat panel: the same combo art, shown only left
+         * of the rail, so the desk runs on under the panel instead of stopping
+         * at the rail edge. z-index 0 sits it above the backdrop, below the panel. */
+        var back = document.createElement('div');
+        back.setAttribute('data-dsh-academy-desk-back', '');
+        back.setAttribute('aria-hidden', 'true');
+        var backPose = document.createElement('div');
+        backPose.className = 'dsh-academy-pose';
+        var backImage = document.createElement('img');
+        backImage.className = 'dsh-academy-character';
+        backImage.alt = '';
+        backImage.draggable = false;
+        backPose.appendChild(backImage);
+        back.appendChild(backPose);
+        document.body.appendChild(back);
+        /* Decode every pose up front so a pick fades in at once, not after a
+         * ~0.4 s decode of the large data URI. */
+        expressionTable().forEach(function (entry) {
+          [entry.src, entry.hair].forEach(function (src) {
+            if (!src) return;
+            var img = new Image();
+            img.src = src;
+            if (img.decode) img.decode().catch(function () {});
+            comboPreload.push(img);
+          });
+        });
+      }
       selectExpression(rail, storedExpression(), false);
     }
 
