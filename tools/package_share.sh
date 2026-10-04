@@ -32,6 +32,7 @@ if [ -n "$PREVIEW" ]; then
   find "$PREVIEW" -maxdepth 1 -type f ! -name '.*' -exec cp {} "$PKG/预览/" \;
   chmod 644 "$PKG/预览/"*   # 外置盘（exFAT）上拷来的文件权限是 rwx------
 fi
+chmod -R go+rX "$PKG"   # 源文件有的是 rw-------
 rm -f "$OUT/$NAME.zip" "$OUT/$NAME-源码.zip"
 (cd "$STAGE" && zip -qrX "$OUT/$NAME.zip" "$NAME" -x '*.DS_Store')
 git archive --format=zip --prefix="$NAME-源码/" -o "$OUT/$NAME-源码.zip" HEAD
