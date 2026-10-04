@@ -10,7 +10,8 @@
 接触阴影：桌沿以下人物的轮廓向右下偏移、模糊，作为半透明深色层合进人物层（只出现在人物以外）。
 
 输出 assets/combo/char-*.png（1000×1120），调试图写到 --debug 目录。
-用法：python3 tools/combo_layers.py [--debug <目录>]
+给出 --desk（GPT 交付的固定书桌，1405×1120）时同时生成 desk-fixed.png；只要 desk-fixed.png 存在就重新生成 desk-front.png。
+用法：python3 tools/combo_layers.py [--desk <素材目录>/round15/desk-fixed.png] [--debug <目录>]
 坐标注释都是 round14 原图坐标（x 减 250 就是合成图坐标）。
 """
 import sys
@@ -152,17 +153,19 @@ def main():
         debug.mkdir(parents=True, exist_ok=True)
     imgs = {k: np.asarray(Image.open(DIR / f'combo-{k}.png').convert('RGBA')) for k in KEYS}
     masks = {}
+    props = np.zeros(imgs['happy'].shape[:2], bool)
     for key in ('happy',) + tuple(k for k in KEYS if k != 'happy'):
         a = imgs[key]
         m, prop = char_mask(key, a, None if key == 'happy' else (imgs['happy'], masks['happy']))
         masks[key] = m
+        props |= prop
         h, w = m.shape
         yy = np.arange(h)[:, None] * np.ones((1, w), int)
         rgb = a[..., :3].astype(float)
-        # 挖掉的物件处如果夹在头发中间，用头发颜色补上（前景物件层会盖住，补的是防止错位时露出背景）
+        # 挖掉的物件处用头发颜色补一圈（前景物件层会盖住，补的是防止错位时露出背景）
         _, _, _, hair = colors(a)
-        near_hair = ndimage.binary_dilation(hair & m, iterations=6)
-        fillin = prop & near_hair
+        # 只补紧贴头发的 3px，不往外长出色块；其余挖空处由前景物件层（羽毛笔、墨水瓶）盖住
+        fillin = prop & ndimage.binary_dilation(hair & m, iterations=3)
         rgb = inpaint(rgb, fillin, m & ~prop)
         m = m | fillin
         soft = ndimage.gaussian_filter(m.astype(float), 0.7)
@@ -185,6 +188,30 @@ def main():
             over[edge] = (255, 0, 0, 255)
             over[prop] = (over[prop] * 0.4 + np.array([0, 255, 0, 255]) * 0.6).astype('uint8')
             Image.fromarray(over).save(debug / f'mask-{key}.png')
+    desk_layers(props, sys.argv[sys.argv.index('--desk') + 1] if '--desk' in sys.argv else None)
+
+
+def desk_layers(props, src=None):
+    """固定书桌：--desk 给出 GPT 原图（1405×1120）时裁成 x 250–1250 存为 desk-fixed.png；
+    再从中切出羽毛笔、墨水瓶（人物层挖掉的地方，外扩 2px）存为 desk-front.png，叠在人物层上面。"""
+    if src:
+        d = Image.open(src).convert('RGBA')
+        if d.size != (1405, 1120):
+            raise SystemExit(f'desk 尺寸应为 1405×1120，实际 {d.size}')
+        a = np.asarray(d.crop((X0, 0, X0 + 1000, 1120))).copy()
+        a[..., 3] = np.where(a[..., 3] >= 240, 255, a[..., 3])   # GPT 给的主体 alpha 是 245–254
+        Image.fromarray(a).save(DIR / 'desk-fixed.png', optimize=True)
+        print('wrote', DIR / 'desk-fixed.png')
+    path = DIR / 'desk-fixed.png'
+    if not path.exists():
+        return
+    a = np.asarray(Image.open(path).convert('RGBA')).copy()
+    xx = np.arange(a.shape[1])[None, :] + X0
+    front = ndimage.binary_dilation(props, iterations=2) & (xx >= PROP_BOX[0][0])
+    a[..., 3] = np.where(front, a[..., 3], 0)
+    a[~front] = 0
+    Image.fromarray(a).save(DIR / 'desk-front.png', optimize=True)
+    print('wrote', DIR / 'desk-front.png')
 
 
 if __name__ == '__main__':

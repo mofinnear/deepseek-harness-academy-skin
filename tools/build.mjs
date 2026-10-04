@@ -312,7 +312,20 @@ function buildSkinAssets(config) {
     };
   });
   const art = Object.fromEntries(ART_KEYS.map((key) => [key, Boolean(config.skin.art?.[key]?.source)]));
-  return { mascot: mascot.src, combo: config.skin.mascot?.combo === true, expressions, hasMemoArt: Boolean(config.skin.memo?.source), art };
+  // 固定书桌 + 人物层：书桌和前景物件（羽毛笔、墨水瓶）各一张，不随表情切换
+  const comboLayer = (key) => {
+    const source = config.skin.mascot?.combo === true ? config.skin.mascot?.[key] : null;
+    return source ? buildVariant({ source, maxPx: 1120, webp: true, fit: 'img' }, false).src : null;
+  };
+  return {
+    mascot: mascot.src,
+    combo: config.skin.mascot?.combo === true,
+    comboDesk: comboLayer('desk'),
+    comboFront: comboLayer('front'),
+    expressions,
+    hasMemoArt: Boolean(config.skin.memo?.source),
+    art,
+  };
 }
 
 /**

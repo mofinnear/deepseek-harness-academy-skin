@@ -461,7 +461,10 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  *   左 = 立绘左 − (424 − 250) / 0.465 / 1199 × 立绘宽；上 = 104px − 3 / 0.465 / 1312 × 立绘高
  * 合成图截在陪伴栏里（书桌不能盖到对话框上）；伸出栏外盖住对话框的只有头发：
  * assets/combo/hair-*.png 是合成图左侧 x 0–270、y 0–700 的一条，桌面以下只留发丝（tools/combo_hair.py），
- * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。 */
+ * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。
+ * 「固定书桌 + 人物层」（陪伴栏带 data-layered，第九步）：书桌 desk-fixed 一张不切换，截在栏内；
+ * 人物层 char-*（tools/combo_layers.py）不截，伸出栏外的头发直接盖住对话框，不再需要头发条；
+ * 最上面是从书桌切出的羽毛笔和墨水瓶 desk-front。三张都是同一原点、同一尺寸。 */
 $SKIN [data-dsh-academy-rail][data-combo],
 $SKIN [data-dsh-academy-desk-back] {
   --dsh-ch-h: calc(63vh - 70px);
@@ -481,7 +484,10 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,
-$SKIN [data-dsh-academy-desk-back] .dsh-academy-character {
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-desk,
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-front,
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-character,
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-combo-desk {
   position: absolute;
   top: calc(104px - var(--dsh-ch-h) * 0.0049);
   bottom: auto;
@@ -491,11 +497,14 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-character {
   pointer-events: none;
   user-select: none;
 }
-$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character {
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-desk,
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-front {
   width: calc(var(--dsh-ch-w) * 1.7936);
   height: calc(var(--dsh-ch-h) * 1.8358);
   clip-path: inset(0 0 0 var(--dsh-combo-rail-x));
 }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character { clip-path: none; }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
   width: calc(var(--dsh-ch-w) * 0.4843);   /* 270 / 1000 × 合成图宽 */
   height: calc(var(--dsh-ch-h) * 1.1474);  /* 700 / 1120 × 合成图高 */
@@ -512,7 +521,8 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
   width: var(--dsh-rail-w);
   pointer-events: none;
 }
-$SKIN [data-dsh-academy-desk-back] .dsh-academy-character {
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-character,
+$SKIN [data-dsh-academy-desk-back] .dsh-academy-combo-desk {
   width: calc(var(--dsh-ch-w) * 1.7936);
   height: calc(var(--dsh-ch-h) * 1.8358);
   clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x)) 0 0);

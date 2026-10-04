@@ -333,11 +333,12 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Combo art carries the desk, so a pose never fades to empty: the new pose
-     * is stacked on top, faded in once decoded, and the poses below it fade out
-     * and are dropped. Two containers hold poses: the rail (combo art + hair
-     * strip, above the chat panel) and the desk layer behind the chat panel
-     * (combo art only); both switch together.
+     * A pose never fades to empty: the new pose is stacked on top, faded in once
+     * decoded, and the poses below it fade out and are dropped. Layered mode
+     * (skinAssets.comboDesk): the desk and the quill/inkwell in front are single
+     * fixed images and only the character layer switches, so the desk never
+     * shows double. Older combo art carries the desk in every pose; then the
+     * desk layer behind the chat panel holds poses too and both switch together.
      */
     var comboPreload = [];
 
@@ -406,6 +407,15 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function comboImage(className, src) {
+      var img = document.createElement('img');
+      img.className = className;
+      img.alt = '';
+      img.draggable = false;
+      img.src = src;
+      return img;
+    }
+
     /** Right companion rail: memo, portrait, speech bubble and expression picker. */
     function ensureAcademyRail() {
       if (!document.body || document.querySelector('[data-dsh-academy-rail]')) return;
@@ -427,17 +437,29 @@ window.__ModuleLoader__.load({
       character.className = 'dsh-academy-character';
       character.alt = '';
       character.draggable = false;
+      var comboStack = [];
       if (skinAssets.combo) {
-        /* Combo pose = combo art clipped to the rail + a hair-only strip that
-         * spills past the rail edge over the chat panel. */
         var pose = document.createElement('div');
         pose.className = 'dsh-academy-pose';
-        var hair = document.createElement('img');
-        hair.className = 'dsh-academy-hair';
-        hair.alt = '';
-        hair.draggable = false;
-        pose.append(character, hair);
-        character = pose;
+        if (skinAssets.comboDesk) {
+          /* Layered: fixed desk (clipped to the rail) below, the character layer
+           * unclipped so its hair spills over the chat panel, quill and inkwell on top. */
+          rail.setAttribute('data-layered', '');
+          pose.appendChild(character);
+          comboStack = [comboImage('dsh-academy-combo-desk', skinAssets.comboDesk), pose];
+          if (skinAssets.comboFront) comboStack.push(comboImage('dsh-academy-combo-front', skinAssets.comboFront));
+        } else {
+          /* Combo art clipped to the rail + a hair-only strip that spills past
+           * the rail edge over the chat panel. */
+          var hair = document.createElement('img');
+          hair.className = 'dsh-academy-hair';
+          hair.alt = '';
+          hair.draggable = false;
+          pose.append(character, hair);
+          comboStack = [pose];
+        }
+      } else {
+        comboStack = [character];
       }
 
       var bubble = document.createElement('div');
@@ -484,23 +506,28 @@ window.__ModuleLoader__.load({
       var deskGlobe = document.createElement('div');
       deskGlobe.className = 'dsh-academy-desk-globe';
       [deskBooks, deskGlobe].forEach(function (node) { node.setAttribute('aria-hidden', 'true'); });
-      rail.append(memo, sparkles, bigStar, desk, deskBooks, deskGlobe, character, bubble, picker);
+      rail.append.apply(rail, [memo, sparkles, bigStar, desk, deskBooks, deskGlobe].concat(comboStack, [bubble, picker]));
       document.body.appendChild(rail);
       if (skinAssets.combo) {
-        /* Desk layer behind the chat panel: the same combo art, shown only left
-         * of the rail, so the desk runs on under the panel instead of stopping
-         * at the rail edge. z-index 0 sits it above the backdrop, below the panel. */
+        /* Desk layer behind the chat panel: the desk art shown only left of the
+         * rail, so the desk runs on under the panel instead of stopping at the
+         * rail edge. z-index 0 sits it above the backdrop, below the panel.
+         * Layered mode needs only the fixed desk here; otherwise it is a pose. */
         var back = document.createElement('div');
         back.setAttribute('data-dsh-academy-desk-back', '');
         back.setAttribute('aria-hidden', 'true');
-        var backPose = document.createElement('div');
-        backPose.className = 'dsh-academy-pose';
-        var backImage = document.createElement('img');
-        backImage.className = 'dsh-academy-character';
-        backImage.alt = '';
-        backImage.draggable = false;
-        backPose.appendChild(backImage);
-        back.appendChild(backPose);
+        if (skinAssets.comboDesk) {
+          back.appendChild(comboImage('dsh-academy-combo-desk', skinAssets.comboDesk));
+        } else {
+          var backPose = document.createElement('div');
+          backPose.className = 'dsh-academy-pose';
+          var backImage = document.createElement('img');
+          backImage.className = 'dsh-academy-character';
+          backImage.alt = '';
+          backImage.draggable = false;
+          backPose.appendChild(backImage);
+          back.appendChild(backPose);
+        }
         document.body.appendChild(back);
         /* Decode every pose up front so a pick fades in at once, not after a
          * ~0.4 s decode of the large data URI. */
