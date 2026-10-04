@@ -9,6 +9,7 @@
 ## 快速安装
 
 - **只想用**：拿到分享包 `星海书院皮肤-v<版本>.zip`，解压后双击 `安装.command`，再完全退出（`Cmd+Q`）并重新打开 DeepSeek Harness。详细步骤、被系统拦截时的处理、手动安装和卸载见包里的 [`使用说明.md`](share/使用说明.md)。不需要 Node 或 Python。
+- **交给 DeepSeek Harness 安装**：把 `使用说明.md` 拖进对话框，权限切到「完全权限」，让它按说明里「给 AI 助手的安装步骤」安装——它会先备份 `~/.dsh/profiles/desktop` 里要改的两处，装完提醒你 `Cmd+Q` 重开，并告诉你快捷键（`Option+Shift+B` 会隐藏全部界面，再按一次恢复）。
 - **从源码安装**：需要 Node.js（构建时缩放素材还要 Python 3 + Pillow）。在项目目录运行 `node tools/install.mjs --apply`（会先构建），然后重启应用。卸载：`node tools/install.mjs --revert`。
 
 两种方式都只写用户目录里的两处：`~/.dsh/profiles/desktop/node_modules/@local/dsh-logo/`（插件文件）和 `~/.dsh/profiles/desktop/cordis.patch.yml`（追加一条加载项）。

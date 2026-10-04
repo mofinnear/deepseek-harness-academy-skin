@@ -23,8 +23,8 @@ echo "已备份当前设置到：$BACKUP"
 
 rm -rf "$TARGET" || fail "删除插件文件失败。"
 if [ -f "$PATCH" ]; then
-  # 去掉安装时追加的那一段（注释行、- insert:、id、name 四行），再把多余的空行合并
-  perl -0pi -e 's/^# Local logo override[^\n]*\n(?=- insert:\n[ \t]+- id: local-dsh-logo\n)//mg; s/^- insert:\n[ \t]+- id: local-dsh-logo\n[ \t]+name: [^\n]*\n?//mg; s/\n{3,}/\n\n/g' "$PATCH" \
+  # 只去掉安装时追加的东西：前面那个换行 + 注释行（可能没有）+ - insert: / id / name 三行；文件其余部分一个字节都不动
+  perl -0pi -e 's/\n?(?:# Local logo override[^\n]*\n)?- insert:\n[ \t]+- id: local-dsh-logo\n[ \t]+name: [^\n]*(?:\n|\z)//g' "$PATCH" \
     || fail "修改 $PATCH 失败。"
 fi
 
