@@ -563,6 +563,20 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-combo-desk {
   height: calc(var(--dsh-ch-h) * 1.8358);
   clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x)) 0 0);
 }
+/* 固定书桌用整张（GPT 原图 1405 宽，不再裁成合成图的 x 250–1250）：裁过的书桌左端在合成图左边被竖着切断，
+ * 启动时陪伴栏比对话框先出来，就会看到这一刀（用户发现）。整张图比合成图宽 1.405 倍、往左多 250 合成图像素
+ * （250 × 0.0017936 = 0.4484 × 立绘宽），截切位置相应右移同样的量。 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-desk,
+$SKIN [data-dsh-academy-desk-back][data-layered] .dsh-academy-combo-desk {
+  left: calc(var(--dsh-ch-x) - var(--dsh-ch-w) * 0.7605);
+  width: calc(var(--dsh-ch-w) * 2.5200);
+}
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-desk {
+  clip-path: inset(0 0 0 calc(var(--dsh-combo-rail-x) + var(--dsh-ch-w) * 0.4484));
+}
+$SKIN [data-dsh-academy-desk-back][data-layered] .dsh-academy-combo-desk {
+  clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x) - var(--dsh-ch-w) * 0.4484) 0 0);
+}
 body:not([data-dsh-anime-skin="active"]) [data-dsh-academy-desk-back],
 body[data-dsh-anime-skin-stage="focus"] [data-dsh-academy-desk-back],
 $SKIN:not(:has([data-rightbar-collapsed="true"])) [data-dsh-academy-desk-back] { display: none; }

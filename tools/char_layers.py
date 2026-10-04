@@ -7,7 +7,7 @@
 好奇表情的蓝色笔杆不动），手臂和手压在桌上。人物贴近桌面的部分按到下沿的距离乘一个偏肉色的阴影色，桌面投影程序生成（贴边一层 + 右下柔和投影，偏肉色，正片叠底），画布底部多留 PAD px 给阴影。
 输出 assets/combo/char-*.png（2398×2704）、shadow-*.png（桌面投影，1199×1352，页面里正片叠底）和 thumb-*.png（256×256，同一个头部框）。
 
-书桌：--desk 给出 GPT 交付的固定书桌（1405×1120）时，裁出合成图坐标 x 250–1250 存为 desk-fixed.png（alpha ≥ 240 改成 255），
+书桌：--desk 给出 GPT 交付的固定书桌（1405×1120）时，整张存为 desk-fixed.png（alpha ≥ 240 改成 255；页面里左移 250 合成图像素放置），
 并切出羽毛笔和墨水瓶所在的矩形存为 desk-front.png，叠在人物层上面（这块和下面的书桌像素相同，只有盖住头发的地方看得出来）。
 
 坐标：下面的常量都是立绘坐标（1199×1312），按 S 倍换算到 relit3 原图。立绘坐标 p 和合成图坐标 c（1000×1120，即 round14 x 250–1250）
@@ -161,7 +161,7 @@ def desk_layers(src):
     a = np.asarray(d).copy()
     a[..., 3] = np.where(a[..., 3] >= 240, 255, a[..., 3])   # GPT 给的主体 alpha 是 245–254
     full = Image.fromarray(a)
-    full.crop((250, 0, 1250, 1120)).save(DIR / 'desk-fixed.png', optimize=True)
+    full.save(DIR / 'desk-fixed.png', optimize=True)   # 整张（1405 宽）：裁掉左段的话启动时能看到书桌被竖着切断
     front_layer(full).crop((250, 0, 1250, 1120)).save(DIR / 'desk-front.png', optimize=True)
     print('wrote', DIR / 'desk-fixed.png', DIR / 'desk-front.png')
 
@@ -325,7 +325,7 @@ def main():
             # 预览：按合成图坐标叠到固定书桌上
             Path(debug).mkdir(parents=True, exist_ok=True)
             base = Image.new('RGBA', (1000, 1120), (225, 228, 235, 255))
-            base.alpha_composite(Image.open(DIR / 'desk-fixed.png'))
+            base.alpha_composite(Image.open(DIR / 'desk-fixed.png').crop((250, 0, 1250, 1120)))
             size = (round(W * FIG_K / S), round((H + PAD) * FIG_K / S))
             sh = Image.new('RGBA', base.size, (0, 0, 0, 0))
             small = shadow.resize(size, Image.LANCZOS)

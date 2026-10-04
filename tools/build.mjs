@@ -317,7 +317,7 @@ function buildSkinAssets(config) {
   // 固定书桌 + 人物层：书桌和前景物件（羽毛笔、墨水瓶）各一张，不随表情切换
   const comboLayer = (key) => {
     const source = config.skin.mascot?.combo === true ? config.skin.mascot?.[key] : null;
-    return source ? buildVariant({ source, maxPx: 1120, webp: true, fit: 'img' }, false).src : null;
+    return source ? buildVariant({ source, maxPx: key === 'desk' ? 1405 : 1120, webp: true, fit: 'img' }, false).src : null;
   };
   return {
     mascot: mascot.src,
