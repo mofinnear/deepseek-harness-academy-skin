@@ -497,9 +497,7 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   pointer-events: none;
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pose {
-  transition-duration: 150ms; /* 每组都带同一张书桌：新的一组先淡入，快满时旧的一组 80ms 淡出（client.js） */
-}
+/* 固定书桌 + 人物层的表情切换是直接替换、没有淡入淡出（client.js selectComboPose）：任何交叉淡入都会透出旧人物，看起来像重影。 */
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-desk,

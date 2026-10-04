@@ -376,30 +376,32 @@ window.__ModuleLoader__.load({
       });
       if (!fresh.length) return;
       var reveal = function () {
+        /* Layered poses carry the same desk, so the picture is swapped at once:
+         * any cross-fade shows the old figure through the half-transparent new
+         * one (hands, face and hair doubled), which reads as a ghost however
+         * short it is. Older combo art cross-fades instead. */
+        var layered = Boolean(skinAssets.comboDesk);
         fresh.forEach(function (next) {
+          /* Only poses stacked below this one, so a quicker later pick survives. */
+          var below = [];
+          for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
+          if (layered) {
+            next.style.transition = 'none';
+            next.style.opacity = '1';
+            below.forEach(function (node) { node.remove(); });
+            return;
+          }
           /* Not requestAnimationFrame: it never fires while the window is hidden,
            * and the timers below would then drop the visible pose. A forced layout
            * commits opacity 0 first, so setting 1 still transitions. */
           void next.offsetWidth;
           next.style.opacity = '1';
-          /* Only poses stacked below this one, so a quicker later pick survives. */
-          var below = [];
-          for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
-          /* Layered poses carry the same desk, so the new pose fades in (150ms)
-           * over the old one and the old one fades out quickly (80ms) only once
-           * the new one is nearly opaque: the desk never visibly dims, and the old
-           * figure (hands, hair outside the new figure) does not linger as a
-           * ghost. Older combo art overlaps the two fades instead. */
-          var layered = Boolean(skinAssets.comboDesk);
           window.setTimeout(function () {
-            below.forEach(function (node) {
-              if (layered) node.style.transitionDuration = '80ms';
-              node.style.opacity = '0';
-            });
-          }, layered ? 100 : 70);
+            below.forEach(function (node) { node.style.opacity = '0'; });
+          }, 70);
           window.setTimeout(function () {
             below.forEach(function (node) { node.remove(); });
-          }, layered ? 200 : 300);
+          }, 300);
         });
       };
       Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
