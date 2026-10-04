@@ -481,6 +481,13 @@ $SKIN [data-dsh-academy-desk-back] {
   --dsh-ch-x: max(calc(-64px + (var(--dsh-rail-w) + 70px) / 2 - var(--dsh-ch-w) / 2), calc(var(--dsh-ch-w) * -0.0556));
   --dsh-combo-rail-x: calc(var(--dsh-ch-w) * 0.3121 - var(--dsh-ch-x)); /* 陪伴栏左边在合成图元素里的横坐标 */
 }
+/* 固定书桌 + 人物层：角色在书桌上右移了 230 − 174 = 56 合成图像素（0.1004 × 立绘宽，按用户调整的摆放），
+ * 整组（书桌 + 人物）再往左移同样的量，让人物在屏幕上回到原来的位置：左侧耳朵和头发伸出陪伴栏、搭在对话框上，
+ * 书桌多出来的左段藏到对话框下面（desk-back 层）。手和书的相对位置不变。 */
+$SKIN [data-dsh-academy-rail][data-layered],
+$SKIN [data-dsh-academy-desk-back][data-layered] {
+  --dsh-ch-x: calc(max(calc(-64px + (var(--dsh-rail-w) + 70px) / 2 - var(--dsh-ch-w) / 2), calc(var(--dsh-ch-w) * -0.0556)) - var(--dsh-ch-w) * 0.1004);
+}
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose,
 $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   position: absolute;

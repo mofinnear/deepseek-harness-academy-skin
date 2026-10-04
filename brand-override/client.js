@@ -523,6 +523,7 @@ window.__ModuleLoader__.load({
          * Layered mode needs only the fixed desk here; otherwise it is a pose. */
         var back = document.createElement('div');
         back.setAttribute('data-dsh-academy-desk-back', '');
+        if (skinAssets.comboDesk) back.setAttribute('data-layered', '');
         back.setAttribute('aria-hidden', 'true');
         if (skinAssets.comboDesk) {
           back.appendChild(comboImage('dsh-academy-combo-desk', skinAssets.comboDesk));
