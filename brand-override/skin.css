@@ -16,7 +16,9 @@
  */
 
 $SKIN {
-  --dsh-rail-w: min(330px, 27vw);
+  /* 陪伴栏宽：常用窗口（1280×805）是 330px；窗口高时按 41vh 一起变宽，保持立绘和栏宽的比例
+   * （以前固定 330px 上限，1920×1200 时立绘按高度放大到栏宽的 1.9 倍，头压住便签、右边头发被窗口切掉）。不超过 27vw。 */
+  --dsh-rail-w: min(27vw, max(330px, 41vh));
   --dsh-academy-gold: #d9b56d;
   --dsh-academy-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fff6d6'/%3E%3Cstop offset='.5' stop-color='%23e7bd62'/%3E%3Cstop offset='1' stop-color='%23b8862f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 C21.5 13 27 18.5 40 20 C27 21.5 21.5 27 20 40 C18.5 27 13 21.5 0 20 C13 18.5 18.5 13 20 0Z' fill='url(%23g)' stroke='%23fff8e0' stroke-width='.8'/%3E%3C/svg%3E");
   color-scheme: light;
@@ -83,6 +85,9 @@ $SKIN [data-sidebar-collapsed="true"] div:has(> div > [data-slot="sidebar.worksp
   box-shadow: none !important;
 }
 $SKIN [data-sidebar-collapsed="true"] div:has(> div > [data-slot="sidebar.workspaces"])::after { display: none; }
+/* 收起后「打开侧边栏 / 新建会话」两个按钮（y 11–39）正好压在对话框上沿的金边（y≈14–22）上；
+ * 往下挪 16px，落到对话框标题栏里、和标题同一行（收起时标题从 x≈210 开始，左边有空位） */
+$SKIN [data-sidebar-collapsed="true"] > [data-shell-leading="true"] { transform: translateY(16px); }
 
 /* 侧栏这一列原生自带 40% 深蓝底 + 渐变，卡片四周会露出一圈和全景背景不同的色带 */
 $SKIN [class*="_sidebarCol"] { background: transparent !important; }
@@ -475,7 +480,8 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
  * 书桌 desk-fixed 和羽毛笔、墨水瓶 desk-front 是合成图坐标（1000×1120），和以前的合成图同一位置。 */
 $SKIN [data-dsh-academy-rail][data-combo],
 $SKIN [data-dsh-academy-desk-back] {
-  --dsh-ch-h: calc(63vh - 70px);
+  /* 立绘高按窗口高，但不超过栏宽的 1.33 倍（1280×805 时正好 437 / 330）：又高又窄的窗口里立绘不再撑出栏外 */
+  --dsh-ch-h: min(calc(63vh - 70px), calc(var(--dsh-rail-w) * 1.33));
   --dsh-ch-w: calc(var(--dsh-ch-h) * 0.9139);
   /* 和立绘一样居中，但不能再往左：桌沿附近的袖子（合成图裁切后 x≈222）必须留在陪伴栏里，
    * 否则它伸到栏外、又不在头发条里，会被栏边竖着切掉。下限让栏左边落在 x≈205：
@@ -621,8 +627,9 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; }
 /* 固定书桌 + 人物层：气泡在墨水瓶下面。墨水瓶底在书桌图 y≈601，换成屏幕：
  * 合成图上沿 104px − 0.0049 × 立绘高，每个合成图像素 0.0016391 × 立绘高 → 104px + 0.9802 × 立绘高。
  * 再空 30px：空 8px 时气泡上沿压在桌上的纸张上，同是米白色看不清（用户要求往下挪）。 */
-/* 窗口矮时立绘缩小得比表情按钮上移慢，气泡会压到按钮：上限 = 栏底 − 按钮底距 22 − 按钮高（≤100）− 12 − 气泡高（约 100）。 */
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-bubble { top: min(calc(104px + var(--dsh-ch-h) * 0.9802 + 30px), calc(100% - 234px)); bottom: auto; }
+/* 窗口矮时立绘缩小得比表情按钮上移慢，气泡会压到按钮：上限 = 栏底 − 按钮底距 22 − 按钮高 − 12 − 气泡高（约 100）。
+ * 按钮高 = 缩略图边长 (栏宽 − 48) / 4 + 文字约 30（栏宽 330 时 100px；栏宽随窗口高变宽后缩略图也变大）。 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-bubble { top: min(calc(104px + var(--dsh-ch-h) * 0.9802 + 30px), calc(100% - 164px - (var(--dsh-rail-w) - 48px) / 4)); bottom: auto; }
 
 .dsh-academy-bubble {
   position: absolute;
