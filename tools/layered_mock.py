@@ -1,6 +1,6 @@
 from PIL import Image, ImageFilter
 import numpy as np, sys
-AS='/Volumes/LQ1000/Code/Deepseek Harness UI设计/assets/'
+AS=sys.argv[1].rstrip('/')+'/'   # <素材目录>（旧的拼合草稿工具，已不再使用）
 A=AS+'round6/relit3/'
 desk=Image.open(AS+'desk3.png').convert('RGBA')
 BACK=472
@@ -35,5 +35,5 @@ W,H=outs['expr-happy'].size
 s=Image.new('RGB',(1410,1290),'white')
 for i,(n,c) in enumerate(outs.items()):
     t=c.crop((600,0,2350,1600)).convert('RGB').resize((700,640)); s.paste(t,((i%2)*710,(i//2)*650))
-s.save('/Volumes/LQ1000/拼合草稿-desk3.png')
+s.save(sys.argv[2] if len(sys.argv) > 2 else '拼合草稿-desk3.png')
 full=outs['academy-maid-pensive'].convert('RGB'); full.thumbnail((1400,1400)); full.save('m-full.png')

@@ -7,7 +7,7 @@
 任务：给 4 张「角色 + 书桌」合成图的角色重新打光（重画明暗），让角色和书桌融为一体。这是一个新话题，下面是完整信息。
 
 【文件】
-- 工作目录：/Volumes/LQ1000/Code/Deepseek Harness UI设计/assets/round7/
+- 工作目录：<素材目录>/round7/
 - 输入：combo-default.png、combo-happy.png、combo-curious.png、combo-wink.png。都是 2000×2200 RGBA 透明 PNG；角色在 x 400–1599、y 0–1312（就是原立绘逐像素贴上去的）；书桌桌面后沿在 y≈1150，桌面前沿在 y≈1376，书桌宽约 x 88–1914。
 - 原立绘（角色轮廓 = 它们的 alpha，贴在画布 x 400、y 0）：~/Documents/deepseek-harness/default-workspace/dsh-logo/assets/relit/ 下的 academy-maid-pensive.png（默认）、expr-happy.png、expr-curious.png、expr-wink.png。
 - 背景（做对比图用）：~/Documents/deepseek-harness/default-workspace/dsh-logo/assets/academy-panorama-day.jpg
