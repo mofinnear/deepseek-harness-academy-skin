@@ -77,7 +77,7 @@ if (themeCssMatch) {
   };
   record('skin.css $SKIN placeholders are expanded', !css.includes('$SKIN'));
   record('panoramic background fills the viewport beneath content', /body\[data-dsh-anime-skin="active"\]::before\s*\{[^}]*z-index:\s*0;[^}]*inset:\s*0;[^}]*background-size:\s*cover, cover;/.test(css));
-  record('calibration stage hides interface children but preserves body background', /body\[data-dsh-anime-skin-stage="background-only"\]\s*>\s*:not\(style\):not\(script\)\s*\{\s*visibility:\s*hidden\s*!important;/.test(css));
+  record('calibration stage hides interface children but preserves body background', /body\[data-dsh-anime-skin-stage="background-only"\]\s*>\s*:not\(style\):not\(script\),\s*body\[data-dsh-anime-skin-stage="background-only"\]\s*>\s*:not\(style\):not\(script\)\s+\*\s*\{\s*visibility:\s*hidden\s*!important;/.test(css));
   const sidebar = rule(`${SKIN} div:has(> div > [data-slot="sidebar.workspaces"])`);
   record('sidebar is a floating rounded card with its own background', sidebar.includes('border-radius: 22px') && sidebar.includes('var(--dsh-anime-sidebar-background-src)'));
   record('workspace header row is hidden by row key, sessions stay visible', css.includes(`${SKIN} [role="treeitem"][data-row-key^="workspace:"] { display: none !important; }`));

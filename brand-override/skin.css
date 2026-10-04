@@ -36,7 +36,9 @@ body[data-dsh-anime-skin="active"]::before {
   background-size: cover, cover;
   background-repeat: no-repeat, no-repeat;
 }
-body[data-dsh-anime-skin-stage="background-only"] > :not(style):not(script) { visibility: hidden !important; }
+/* 连子元素一起藏：原生样式里有的元素自带 visibility: visible（如「最近对话」标题），只藏 body 的直接子元素时会漏出来 */
+body[data-dsh-anime-skin-stage="background-only"] > :not(style):not(script),
+body[data-dsh-anime-skin-stage="background-only"] > :not(style):not(script) * { visibility: hidden !important; }
 
 /* ---------- 2. 左侧栏：悬浮圆角卡片 ---------- */
 $SKIN div:has(> div > [data-slot="sidebar.workspaces"]) {
