@@ -498,16 +498,16 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
 /* 固定书桌 + 人物层的表情切换是直接替换、没有淡入淡出（client.js selectComboPose）：任何交叉淡入都会透出旧人物，看起来像重影。 */
-/* 换表情时：人物轻轻往上顶一下，头部附近闪出三颗小星星。书桌、桌面阴影、羽毛笔墨水瓶不动。星星由 client.js 加进新的一组、动画完删掉。
- * 「顶」是以人物层底边为中心竖向拉长 0.8%：头顶上移约 3px，压在桌上的手肘和手几乎不动（< 0.2px）。
- * 不能整体往上平移：手肘离开书页会露出一条白色（书页），用户发现。以前试过放大 2% / 1% 再缩回，用户觉得中规中矩。 */
-@keyframes dsh-academy-hop { 0% { transform: scaleY(1); } 35% { transform: scaleY(1.008); } 70%, 100% { transform: scaleY(1); } }
+/* 换表情时：人物整体往上顶 3px 再落回，头部附近闪出三颗小星星。书桌、桌面阴影、羽毛笔墨水瓶不动（像手抬起一下）。
+ * 星星由 client.js 加进新的一组、动画完删掉。桌面阴影一直延伸到人物下面（char_layers.py），顶起来露出的那条书桌是阴影色、不发白。
+ * 试过以底边为中心竖向拉长（手不动），用户觉得不如整体顶起来好看；放大 2% / 1% 再缩回，用户觉得中规中矩。 */
+@keyframes dsh-academy-hop { 0% { transform: translateY(0); } 35% { transform: translateY(-3px); } 70%, 100% { transform: translateY(0); } }
 @keyframes dsh-academy-twinkle {
   0% { opacity: 0; transform: scale(0.2) rotate(-40deg); }
   35% { opacity: 1; transform: scale(1) rotate(0deg); }   /* 最亮时是正的四角星，转成 X 会和背景里的星星混在一起 */
   100% { opacity: 0; transform: scale(0.4) rotate(40deg); }
 }
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character { transform-origin: 50% 100%; animation: dsh-academy-hop 300ms ease-out; }
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pop .dsh-academy-character { animation: dsh-academy-hop 300ms ease-out; }
 /* 星星层和人物层同一位置，星星按人物图的比例摆：头饰右边（便签下面）、右耳外侧、呆毛左边。 */
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-sparkle {
   position: absolute;

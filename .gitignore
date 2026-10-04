@@ -5,6 +5,7 @@
 # 构建时自动生成的缩放缓存
 *.max*.png
 *.max*.webp
+*.max*.src
 # 中间稿与未采用的候选图
 /assets/generated-ui/
 /assets/ui/exec-*.png

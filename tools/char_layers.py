@@ -123,7 +123,9 @@ def char_layer(src, shade=True, gpt=None):
         # 颜色取 GPT 手肘下接触阴影的颜色（CONTACT_TINT / BROAD_TINT，四个表情一致）。
         al = a[..., 3] / 255
         body = ((al > 0.5) & low & ~hair).astype(float)
-        out = (1 - al) * low
+        # 阴影一直延伸到人物下面（以前乘 1 − alpha 只留人物外面）：平时被不透明的人物盖住看不见；换表情时人物往上顶 3px，
+        # 露出的那条书桌也是阴影色。以前那条没有阴影，在周围的阴影里显得发白（用户发现）。
+        out = low
         def soft(dy, dx, sigma):
             m = ndimage.gaussian_filter(ndimage.shift(body, (dy * S, dx * S), order=0), sigma * S) * out
             return np.asarray(Image.fromarray((np.clip(m, 0, 1) * 255).astype('uint8')).resize(

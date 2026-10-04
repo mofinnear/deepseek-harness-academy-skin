@@ -76,7 +76,12 @@ function withinBudget(file, maxPx, webp = false) {
   if (!Number.isFinite(limit) || limit <= 0 || extname(file).toLowerCase() === '.svg') return file;
   /* webp: lossy WebP with alpha (Chromium renders it); far smaller for large painted art. */
   const cached = `${file}.max${limit}.${webp ? 'webp' : 'png'}`;
-  if (existsSync(cached) && statSync(cached).mtimeMs >= statSync(file).mtimeMs) return cached;
+  /* Keyed on the source's content, not mtime: a regenerated source can keep an
+   * older mtime (seen with tools/char_layers.py output), and a stale cache then
+   * ships the old art silently. The hash sits next to the cache in `<cache>.src`. */
+  const stamp = `${cached}.src`;
+  const digest = createHash('sha1').update(readFileSync(file)).digest('hex');
+  if (existsSync(cached) && existsSync(stamp) && readFileSync(stamp, 'utf8') === digest) return cached;
   const script = [
     'import sys',
     'from PIL import Image',
@@ -91,6 +96,7 @@ function withinBudget(file, maxPx, webp = false) {
   const run = spawnSync('python3', ['-c', script, file, cached, String(limit)], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`downscale failed for ${file}: ${run.stderr || run.stdout}`);
   if (run.stdout.trim()) process.stdout.write(run.stdout);
+  writeFileSync(stamp, digest);
   return cached;
 }
 
