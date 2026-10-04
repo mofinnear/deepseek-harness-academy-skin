@@ -22,19 +22,34 @@ node tools/verify.mjs >/dev/null   # 有失败项时退出码非 0，set -e 会�
 mkdir -p "$OUT"
 STAGE="$(mktemp -d)"
 PKG="$STAGE/$NAME"
-mkdir -p "$PKG/插件/dsh-logo"
-cp brand-override/package.json brand-override/index.js "$PKG/插件/dsh-logo/"
-cp -R brand-override/dist "$PKG/插件/dsh-logo/"
-cp share/使用说明.md share/安装.command share/卸载.command "$PKG/"
+mkdir -p "$PKG/plugin/dsh-logo"
+cp brand-override/package.json brand-override/index.js "$PKG/plugin/dsh-logo/"
+cp -R brand-override/dist "$PKG/plugin/dsh-logo/"
+cp share/使用说明.md share/安装.command share/卸载.command share/安装-Windows.bat share/卸载-Windows.bat "$PKG/"
+cp -R share/windows "$PKG/"
 chmod +x "$PKG/安装.command" "$PKG/卸载.command"
 if [ -n "$PREVIEW" ]; then
-  mkdir -p "$PKG/预览"
-  find "$PREVIEW" -maxdepth 1 -type f ! -name '.*' -exec cp {} "$PKG/预览/" \;
-  chmod 644 "$PKG/预览/"*   # 外置盘（exFAT）上拷来的文件权限是 rwx------
+  mkdir -p "$PKG/preview"
+  find "$PREVIEW" -maxdepth 1 -type f ! -name '.*' -exec cp {} "$PKG/preview/" \;
+  chmod 644 "$PKG/preview/"*   # 外置盘（exFAT）上拷来的文件权限是 rwx------
 fi
 chmod -R go+rX "$PKG"   # 源文件有的是 rw-------
 rm -f "$OUT/$NAME.zip" "$OUT/$NAME-源码.zip"
-(cd "$STAGE" && zip -qrX "$OUT/$NAME.zip" "$NAME" -x '*.DS_Store')
+# 用 Python 的 zipfile 打包：中文文件名会带上 UTF-8 标记（zip 命令不带，Windows 解压会乱码），并保留可执行权限
+python3 - "$STAGE" "$NAME" "$OUT/$NAME.zip" <<'PY'
+import os, sys, zipfile
+stage, name, out = sys.argv[1:]
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(os.path.join(stage, name)):
+        dirs.sort()
+        for d in dirs:
+            z.write(os.path.join(root, d), os.path.relpath(os.path.join(root, d), stage) + '/')
+        for f in sorted(files):
+            if f == '.DS_Store':
+                continue
+            path = os.path.join(root, f)
+            z.write(path, os.path.relpath(path, stage))
+PY
 git archive --format=zip --prefix="$NAME-源码/" -o "$OUT/$NAME-源码.zip" HEAD
 rm -rf "$STAGE"
 ls -l "$OUT/$NAME.zip" "$OUT/$NAME-源码.zip"

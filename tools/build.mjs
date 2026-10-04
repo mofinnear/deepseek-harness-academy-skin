@@ -93,7 +93,9 @@ function withinBudget(file, maxPx, webp = false) {
     'im.save(dst, quality=90, method=6) if dst.endswith(".webp") else im.save(dst, optimize=True)',
     'print(f"[scale] {src} -> {im.width}x{im.height}")',
   ].join('\n');
-  const run = spawnSync('python3', ['-c', script, file, cached, String(limit)], { encoding: 'utf8' });
+  /* Windows 上通常叫 python，没有 python3 */
+  let run = spawnSync('python3', ['-c', script, file, cached, String(limit)], { encoding: 'utf8' });
+  if (run.error && run.error.code === 'ENOENT') run = spawnSync('python', ['-c', script, file, cached, String(limit)], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`downscale failed for ${file}: ${run.stderr || run.stdout}`);
   if (run.stdout.trim()) process.stdout.write(run.stdout);
   writeFileSync(stamp, digest);

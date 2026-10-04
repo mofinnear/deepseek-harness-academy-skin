@@ -15,6 +15,7 @@
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,7 +27,8 @@ const PROJECT_FILES = ['logo.config.json', 'README.md', '.gitignore'];
 
 function profileDir() {
   if (process.env.DSH_PROFILE_DIR) return process.env.DSH_PROFILE_DIR;
-  const home = process.env.DSH_HOME || join(process.env.HOME ?? '', '.dsh');
+  /* homedir()，不用 process.env.HOME：Windows 上通常没有 HOME（和应用本身一样按系统用户目录 + .dsh） */
+  const home = process.env.DSH_HOME || join(homedir(), '.dsh');
   return join(home, 'profiles', process.env.DSH_PROFILE || 'desktop');
 }
 

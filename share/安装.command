@@ -6,11 +6,12 @@
 # 改动前会把这两处原来的内容备份到 ~/.dsh/academy-skin-backup/<时间>/。
 
 cd "$(dirname "$0")" || exit 1
-SRC="$PWD/插件/dsh-logo"
-PROFILE="${DSH_PROFILE_DIR:-$HOME/.dsh/profiles/desktop}"
+SRC="$PWD/plugin/dsh-logo"
+DSH_HOME_DIR="${DSH_HOME:-$HOME/.dsh}"   # 和应用本身一样：设了 DSH_HOME 就用它
+PROFILE="${DSH_PROFILE_DIR:-$DSH_HOME_DIR/profiles/desktop}"
 PATCH="$PROFILE/cordis.patch.yml"
 TARGET="$PROFILE/node_modules/@local/dsh-logo"
-BACKUP="${DSH_SKIN_BACKUP_DIR:-$HOME/.dsh/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-安装前"
+BACKUP="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-安装前"
 
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
 

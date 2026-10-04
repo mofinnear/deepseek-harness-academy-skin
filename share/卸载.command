@@ -2,10 +2,11 @@
 # 「星海书院」皮肤一键卸载：删掉插件文件和 cordis.patch.yml 里那条加载项，恢复原版界面。
 # 改动前同样会备份到 ~/.dsh/academy-skin-backup/<时间>/。
 
-PROFILE="${DSH_PROFILE_DIR:-$HOME/.dsh/profiles/desktop}"
+DSH_HOME_DIR="${DSH_HOME:-$HOME/.dsh}"   # 和应用本身一样：设了 DSH_HOME 就用它
+PROFILE="${DSH_PROFILE_DIR:-$DSH_HOME_DIR/profiles/desktop}"
 PATCH="$PROFILE/cordis.patch.yml"
 TARGET="$PROFILE/node_modules/@local/dsh-logo"
-BACKUP="${DSH_SKIN_BACKUP_DIR:-$HOME/.dsh/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-卸载前"
+BACKUP="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-卸载前"
 
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
 

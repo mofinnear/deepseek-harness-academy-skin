@@ -20,6 +20,7 @@
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +44,8 @@ const mode = argv.includes('--apply') ? 'apply' : argv.includes('--restore-origi
 /** Resolve the profile directory from the environment, with the desktop default. */
 function profileDir() {
   if (process.env.DSH_PROFILE_DIR) return process.env.DSH_PROFILE_DIR;
-  const home = process.env.DSH_HOME || join(process.env.HOME ?? '', '.dsh');
+  /* homedir()，不用 process.env.HOME：Windows 上通常没有 HOME（和应用本身一样按系统用户目录 + .dsh） */
+  const home = process.env.DSH_HOME || join(homedir(), '.dsh');
   return join(home, 'profiles', process.env.DSH_PROFILE || 'desktop');
 }
 

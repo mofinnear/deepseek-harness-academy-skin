@@ -19,6 +19,7 @@ $SKIN {
   /* 陪伴栏宽：常用窗口（1280×805）是 330px；窗口高时按 41vh 一起变宽，保持立绘和栏宽的比例
    * （以前固定 330px 上限，1920×1200 时立绘按高度放大到栏宽的 1.9 倍，头压住便签、右边头发被窗口切掉）。不超过 27vw。 */
   --dsh-rail-w: min(27vw, max(330px, 41vh));
+  --dsh-top-inset: 0px;
   --dsh-academy-gold: #d9b56d;
   --dsh-academy-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fff6d6'/%3E%3Cstop offset='.5' stop-color='%23e7bd62'/%3E%3Cstop offset='1' stop-color='%23b8862f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 C21.5 13 27 18.5 40 20 C27 21.5 21.5 27 20 40 C18.5 27 13 21.5 0 20 C13 18.5 18.5 13 20 0Z' fill='url(%23g)' stroke='%23fff8e0' stroke-width='.8'/%3E%3C/svg%3E");
   color-scheme: light;
@@ -369,10 +370,14 @@ $SKIN button[aria-label="发送消息"]:disabled { background: linear-gradient(1
 @media (prefers-reduced-motion: reduce) { $SKIN button[aria-label^="访问模式"], $SKIN button[aria-label^="选择模型"] { transition: none; } }
 
 /* ---------- 5. 右侧陪伴栏 ---------- */
+/* Windows 桌面版窗口右上角有 40px 高的原生按钮条（最小化 / 最大化 / 关闭，titleBarOverlay，带底色），
+ * 会压住陪伴栏顶部的便签：非 Mac 的桌面版（data-platform 只在桌面版有）陪伴栏和对话框下面的书桌层从 40px 开始，
+ * 立绘按扣掉这 40px 的窗口高计算，整体构图和矮 40px 的 Mac 窗口一样。未在 Windows 实机验证。 */
+html[data-platform]:not([data-platform="darwin"]) body[data-dsh-anime-skin="active"] { --dsh-top-inset: 40px; }
 [data-dsh-academy-rail] {
   position: fixed;
   z-index: 12;
-  top: 0;
+  top: var(--dsh-top-inset, 0px);
   right: 0;
   bottom: 0;
   width: var(--dsh-rail-w);
@@ -481,7 +486,7 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
 $SKIN [data-dsh-academy-rail][data-combo],
 $SKIN [data-dsh-academy-desk-back] {
   /* 立绘高按窗口高，但不超过栏宽的 1.33 倍（1280×805 时正好 437 / 330）：又高又窄的窗口里立绘不再撑出栏外 */
-  --dsh-ch-h: min(calc(63vh - 70px), calc(var(--dsh-rail-w) * 1.33));
+  --dsh-ch-h: min(calc((100vh - var(--dsh-top-inset, 0px)) * 0.63 - 70px), calc(var(--dsh-rail-w) * 1.33));
   --dsh-ch-w: calc(var(--dsh-ch-h) * 0.9139);
   /* 和立绘一样居中，但不能再往左：桌沿附近的袖子（合成图裁切后 x≈222）必须留在陪伴栏里，
    * 否则它伸到栏外、又不在头发条里，会被栏边竖着切掉。下限让栏左边落在 x≈205：
@@ -593,7 +598,7 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
 [data-dsh-academy-desk-back] {
   position: fixed;
   z-index: 0;
-  top: 0;
+  top: var(--dsh-top-inset, 0px);
   right: 0;
   bottom: 0;
   width: var(--dsh-rail-w);
