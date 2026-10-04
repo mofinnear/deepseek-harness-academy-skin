@@ -11,7 +11,7 @@
 并切出羽毛笔和墨水瓶所在的矩形存为 desk-front.png，叠在人物层上面（这块和下面的书桌像素相同，只有盖住头发的地方看得出来）。
 
 坐标：下面的常量都是立绘坐标（1199×1312），按 S 倍换算到 relit3 原图。立绘坐标 p 和合成图坐标 c（1000×1120，即 round14 x 250–1250）
-的关系是 c = (174, −3) + 0.465 × p，
+的关系是 c = (FIG_X, FIG_Y) + FIG_K × p（FIG_K = 0.465 × FIG_SCALE），
 和 round14 合成图里人物的位置、大小一致（skin.css 合成图段按这个换算）。
 用法：python3 tools/char_layers.py --src <素材目录>/round6/relit3 [--override <素材目录>/round16] [--desk <素材目录>/round15/desk-fixed.png] [--debug <目录>]
 （--override 目录里有同名立绘时优先用它，没有的仍用 --src）
@@ -28,7 +28,7 @@ DIR = Path(__file__).resolve().parent.parent / 'assets' / 'combo'
 SOURCES = {'default': 'academy-maid-pensive', 'happy': 'expr-happy', 'curious': 'expr-curious', 'wink': 'expr-wink'}
 S = 2                # relit3 是立绘坐标的 2 倍
 W, H, PAD = 1199 * S, 1312 * S, 40 * S
-EDGE = 1117 * S      # 桌面后沿：固定书桌在合成图 y≈515，round14 是 518，换成立绘坐标约 1114–1120
+
 RAMP = 6 * S         # 去头发时从桌沿往下 6px 过渡
 SIDE_L, SIDE_R = 150 * S, 960 * S   # 桌沿以下，这两条线外侧的头发是「两侧垂下的头发」，从这里开始找连通的头发
 # 漫画式阴影：不是盖黑，而是在底色上乘一个偏肉色的暖色（正片叠底），越深的地方越接近乘满这个颜色
@@ -38,6 +38,14 @@ SHADOW_TINT = (214, 160, 150)                # 桌面投影的乘色（页面里
 SHADOW_MAX = 0.75
 THUMB_BOX = tuple(v * S for v in (34, 77, 944, 987))   # 头部框，和以前合成图缩略图的框是同一处
 FRONT_BOX = (634, 330, 760, 615)  # 羽毛笔和墨水瓶（合成图坐标）
+# 角色在书桌上的摆放（只改这三个数；陪伴栏的 skin.css 合成图段要按同样的数换算，见那里的注释）
+FIG_X, FIG_Y = 174, -28   # 立绘左上角在合成图里的位置。round14 是 (174, −3)；relit3 的身体比 round14 长约 25px，
+                          # 放在 −3 时腰和衬衫下摆露在桌面上、像从桌子里长出来（用户反馈），上提 25px
+FIG_SCALE = 1.0           # 角色相对 round14 的缩放（1.0 = 立绘坐标 × 0.465）
+FIG_K = 0.465 * FIG_SCALE # 立绘坐标 → 合成图坐标
+DESK_BACK = 515           # 固定书桌桌面后沿（合成图坐标）
+EDGE = round(((DESK_BACK - FIG_Y) / FIG_K + 3) * S)   # 桌面后沿换成立绘坐标（relit3 原图），加 3px 余量
+CANVAS_DY = 0             # 只用于给 GPT 的输入图：整张画面往下移的像素（角色上提后呆毛会超出画布顶部）
 
 
 def char_layer(src, shade=True):
@@ -101,7 +109,8 @@ def desk_layers(src):
 
 def compose_inputs(src, override, desk, out):
     """给 GPT 画光影用的输入图：固定书桌整张（1405×1120）+ relit3 角色（不加阴影）+ 羽毛笔墨水瓶，
-    和 round14 合成图同一坐标（角色缩放 0.465 / S，左上角 (424, −3)）。同时输出角色蒙版（白 = 角色）。"""
+    和 round14 合成图同一坐标（角色缩放 FIG_K / S，左上角 (FIG_X + 250, FIG_Y)），整张再往下移 CANVAS_DY。
+    同时输出角色蒙版（白 = 角色，同样下移）。"""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     full = Image.open(desk).convert('RGBA')
@@ -116,12 +125,13 @@ def compose_inputs(src, override, desk, out):
         if override and (Path(override) / f'{name}.png').exists():
             path = Path(override) / f'{name}.png'
         layer, _ = char_layer(path, shade=False)
-        small = layer.resize((round(W * 0.465 / S), round((H + PAD) * 0.465 / S)), Image.LANCZOS)
+        small = layer.resize((round(W * FIG_K / S), round((H + PAD) * FIG_K / S)), Image.LANCZOS)
         fig = Image.new('RGBA', full.size, (0, 0, 0, 0))
-        fig.paste(small, (424, -3), small)
-        img = full.copy()
+        fig.paste(small, (FIG_X + 250, FIG_Y + CANVAS_DY), small)
+        img = Image.new('RGBA', full.size, (0, 0, 0, 0))
+        img.alpha_composite(full.crop((0, 0, full.width, full.height - CANVAS_DY)), (0, CANVAS_DY))
         img.alpha_composite(fig)
-        img.alpha_composite(front)
+        img.alpha_composite(front.crop((0, 0, full.width, full.height - CANVAS_DY)), (0, CANVAS_DY))
         img.save(out / f'compose-{key}.png')
         mask = np.asarray(fig)[..., 3]
         Image.fromarray(np.where(mask > 128, 255, 0).astype('uint8')).save(out / f'mask-{key}.png')
@@ -154,17 +164,17 @@ def main():
             Path(debug).mkdir(parents=True, exist_ok=True)
             base = Image.new('RGBA', (1000, 1120), (225, 228, 235, 255))
             base.alpha_composite(Image.open(DIR / 'desk-fixed.png'))
-            size = (round(W * 0.465 / S), round((H + PAD) * 0.465 / S))
+            size = (round(W * FIG_K / S), round((H + PAD) * FIG_K / S))
             sh = Image.new('RGBA', base.size, (0, 0, 0, 0))
             small = shadow.resize(size, Image.LANCZOS)
-            sh.paste(small, (174, -3), small)
+            sh.paste(small, (FIG_X, FIG_Y), small)
             k = np.asarray(sh).astype(float)
             b = np.asarray(base).astype(float)
             b[..., :3] *= 1 - k[..., 3:] / 255 * (1 - k[..., :3] / 255)   # 正片叠底
             base = Image.fromarray(b.astype('uint8'))
             small = layer.resize(size, Image.LANCZOS)
             top = Image.new('RGBA', base.size, (0, 0, 0, 0))
-            top.paste(small, (174, -3), small)
+            top.paste(small, (FIG_X, FIG_Y), small)
             base.alpha_composite(top)
             base.alpha_composite(Image.open(DIR / 'desk-front.png'))
             base.save(Path(debug) / f'preview-{key}.png')
