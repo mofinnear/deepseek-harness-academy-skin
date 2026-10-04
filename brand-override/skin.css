@@ -582,6 +582,9 @@ body[data-dsh-anime-skin-stage="focus"] [data-dsh-academy-desk-back],
 $SKIN:not(:has([data-rightbar-collapsed="true"])) [data-dsh-academy-desk-back] { display: none; }
 @media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose, $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose { transition: none; } }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; } /* 和以前 @art desk 段一致 */
+/* 固定书桌 + 人物层：气泡往上挪到墨水瓶下面（用户要求）。墨水瓶底在书桌图 y≈601，换成屏幕：
+ * 合成图上沿 104px − 0.0049 × 立绘高，每个合成图像素 0.0016391 × 立绘高 → 104px + 0.9802 × 立绘高，再空 8px。 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-bubble { top: calc(104px + var(--dsh-ch-h) * 0.9802 + 8px); bottom: auto; }
 
 .dsh-academy-bubble {
   position: absolute;

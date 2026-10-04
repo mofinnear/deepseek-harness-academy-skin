@@ -17,6 +17,7 @@
 （--override 目录里有同名立绘时优先用它，没有的仍用 --src）
 给 GPT 画光影的输入图：python3 tools/char_layers.py --src … --desk <round15/desk-fixed.png> --compose <素材目录>/round17/输入
 阴影取自 GPT（第二步）：python3 tools/char_layers.py --src … --shade-from <素材目录>/round18 --inputs <素材目录>/round17/输入
+  再加用户 PS 手改的袖子阴影：--edit-from <素材目录>/round20 --edit-base <素材目录>/round19
 """
 import sys
 from pathlib import Path
@@ -114,6 +115,8 @@ def char_layer(src, shade=True, gpt=None):
     if gpt is not None:   # 第二步：人物贴桌部分的明暗取自 GPT（round18），桌面阴影的形状按 relit3 轮廓生成
         fig = gpt[0]
         a[..., :3] *= fig
+        if len(gpt) > 3 and gpt[3] is not None:   # 用户在 PS 里手加的袖子阴影（round20 相对 round19）
+            a[..., :3] *= gpt[3]
         a = rim_light(a)   # 第三步：左侧窗光的亮边
         # 桌面阴影不再用 GPT 的比值：GPT 把头发、书页画得和 relit3 不一样，这些差别会变成灰色色块（用户发现两次）。
         # 改为以 relit3 为准：只用桌沿以下、不是头发的部分（手臂、手、袖子）的轮廓，生成贴边窄阴影 + 右下柔和阴影，
@@ -336,11 +339,33 @@ def to_portrait(f, scale, fill=255):
     return np.asarray(out).astype(float) / 255
 
 
+def ps_edit(edit_path, base_path, inp_path, mask_path):
+    """用户在 PS 里改过的图（如 round20，在 round19 上手加袖子阴影）：两张同一画布、没有重画，
+    比值 = 改后 / 改前 只有用户加的明暗；按 round19 的书桌拟合变换回输入图坐标，再换到立绘坐标，乘到高清人物层上。
+    模糊 2px（GPT 图和 relit3 的线条差 1–4px），只取变暗（限制 0.45–1），只在人物范围内。"""
+    I = np.asarray(Image.open(inp_path).convert('RGBA')).astype(float)
+    base = Image.open(base_path).convert('RGBA')
+    E = np.asarray(Image.open(edit_path).convert('RGBA')).astype(float)
+    Bv = np.asarray(base).astype(float)
+    blur = lambda x, s: np.stack([ndimage.gaussian_filter(x[..., c], s) for c in range(3)], -1)
+    r = np.clip(blur(E, 2) / np.maximum(blur(Bv, 2), 8), 0.45, 1)
+    r[(E[..., 3] < 128) | (Bv[..., 3] < 128)] = 1
+    sx, sy, dx, dy = fit_desk(np.asarray(base)[..., 3], I[..., 3])
+    img = Image.fromarray(np.clip(r * 255, 0, 255).astype('uint8'))
+    rw = np.asarray(img.transform((I.shape[1], I.shape[0]), Image.AFFINE, (1 / sx, 0, -dx / sx, 0, 1 / sy, -dy / sy),
+                                  resample=Image.BICUBIC, fillcolor=(255, 255, 255))).astype(float) / 255
+    m = np.asarray(Image.open(mask_path)) > 0
+    rw[~ndimage.binary_dilation(m, iterations=2)] = 1
+    print(f'  ps edit: fit sx {sx:.4f} sy {sy:.4f} dx {dx:+.1f} dy {dy:+.1f}; darkened px {(rw.min(-1) < 0.95).sum()}')
+    return to_portrait(rw, S)
+
+
 def main():
     args = sys.argv[1:]
     opt = lambda name: args[args.index(name) + 1] if name in args else None
     src, desk, debug, override = opt('--src'), opt('--desk'), opt('--debug'), opt('--override')
-    shade_from, inputs = opt('--shade-from'), opt('--inputs')   # 第二步：阴影取自 GPT（如 round18），inputs 是对应的输入图目录
+    shade_from, inputs = opt('--shade-from'), opt('--inputs')
+    edit_from, edit_base = opt('--edit-from'), opt('--edit-base')   # 用户 PS 改过的图（round20）和它的底图（round19）   # 第二步：阴影取自 GPT（如 round18），inputs 是对应的输入图目录
     if '--compose' in args:
         compose_inputs(src, override, desk, opt('--compose'))
         return
@@ -357,6 +382,9 @@ def main():
         if shade_from:
             gpt = gpt_shading(Path(shade_from) / f'combo-{key}.png', Path(inputs) / f'compose-{key}.png',
                               Path(inputs) / f'mask-{key}.png')
+        if gpt is not None and edit_from:
+            gpt = tuple(gpt) + (ps_edit(Path(edit_from) / f'combo-{key}.png', Path(edit_base) / f'combo-{key}.png',
+                                        Path(inputs) / f'compose-{key}.png', Path(inputs) / f'mask-{key}.png'),)
         layer, shadow = char_layer(path, gpt=gpt)
         layer.save(DIR / f'char-{key}.png', optimize=True)
         shadow.save(DIR / f'shadow-{key}.png', optimize=True)
