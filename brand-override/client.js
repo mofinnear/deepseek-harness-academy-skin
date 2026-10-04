@@ -306,6 +306,7 @@ window.__ModuleLoader__.load({
           message: entry.message || DEFAULT_GREETING,
           src: entry.src || skinAssets.mascot,
           thumb: entry.thumb || entry.src || skinAssets.mascot,
+          hair: entry.hair || '',
           cropThumb: !entry.thumb
         };
       });
@@ -314,14 +315,10 @@ window.__ModuleLoader__.load({
     function selectExpression(rail, index, persist) {
       var table = expressionTable();
       var entry = table[index] || table[0];
-      var character = rail.querySelector('.dsh-academy-character');
-      if (character.getAttribute('src') !== entry.src) {
-        /* Cross-fade: the new pose decodes while the old one fades out. */
-        character.style.opacity = '0';
-        window.setTimeout(function () {
-          character.src = entry.src;
-          character.style.opacity = '1';
-        }, character.getAttribute('src') ? 140 : 0);
+      if (skinAssets.combo) {
+        selectComboPose(rail, entry);
+      } else {
+        selectPortrait(rail.querySelector('.dsh-academy-character'), entry);
       }
       rail.querySelector('.dsh-academy-bubble span').textContent = entry.message;
       rail.querySelectorAll('.dsh-academy-expression').forEach(function (button, i) {
@@ -334,12 +331,64 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * Combo art carries the desk, so a pose never fades to empty: the new pose
+     * (combo image + hair strip) is stacked on top, faded in once decoded, and
+     * the poses below it are dropped.
+     */
+    function selectComboPose(rail, entry) {
+      var poses = rail.querySelectorAll('.dsh-academy-pose');
+      var pose = poses[poses.length - 1];
+      var current = pose.querySelector('.dsh-academy-character');
+      if (!current.getAttribute('src')) {
+        current.src = entry.src;
+        pose.querySelector('.dsh-academy-hair').src = entry.hair;
+        return;
+      }
+      if (current.getAttribute('src') === entry.src) return;
+      var next = pose.cloneNode(true);
+      var images = [next.querySelector('.dsh-academy-character'), next.querySelector('.dsh-academy-hair')];
+      images[0].src = entry.src;
+      images[1].src = entry.hair;
+      next.style.opacity = '0';
+      pose.after(next);
+      var reveal = function () {
+        /* Not requestAnimationFrame: it never fires while the window is hidden,
+         * and the timer below would then drop the visible pose. A forced layout
+         * commits opacity 0 first, so setting 1 still transitions. */
+        void next.offsetWidth;
+        next.style.opacity = '1';
+        window.setTimeout(function () {
+          /* Only drop poses stacked below this one, so a quicker later pick survives. */
+          var prev = next.previousElementSibling;
+          while (prev && prev.classList.contains('dsh-academy-pose')) {
+            var older = prev.previousElementSibling;
+            prev.remove();
+            prev = older;
+          }
+        }, 400);
+      };
+      Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
+    }
+
+    function selectPortrait(character, entry) {
+      if (character.getAttribute('src') !== entry.src) {
+        /* Cross-fade: the new pose decodes while the old one fades out. */
+        character.style.opacity = '0';
+        window.setTimeout(function () {
+          character.src = entry.src;
+          character.style.opacity = '1';
+        }, character.getAttribute('src') ? 140 : 0);
+      }
+    }
+
     /** Right companion rail: memo, portrait, speech bubble and expression picker. */
     function ensureAcademyRail() {
       if (!document.body || document.querySelector('[data-dsh-academy-rail]')) return;
       var rail = document.createElement('aside');
       rail.setAttribute('data-dsh-academy-rail', '');
       rail.setAttribute('aria-label', '星海书院助手面板');
+      if (skinAssets.combo) rail.setAttribute('data-combo', '');
 
       var memo = document.createElement('div');
       memo.className = 'dsh-academy-memo';
@@ -354,6 +403,18 @@ window.__ModuleLoader__.load({
       character.className = 'dsh-academy-character';
       character.alt = '';
       character.draggable = false;
+      if (skinAssets.combo) {
+        /* Combo pose = combo art clipped to the rail + a hair-only strip that
+         * spills past the rail edge over the chat panel. */
+        var pose = document.createElement('div');
+        pose.className = 'dsh-academy-pose';
+        var hair = document.createElement('img');
+        hair.className = 'dsh-academy-hair';
+        hair.alt = '';
+        hair.draggable = false;
+        pose.append(character, hair);
+        character = pose;
+      }
 
       var bubble = document.createElement('div');
       bubble.className = 'dsh-academy-bubble';

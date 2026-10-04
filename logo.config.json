@@ -34,13 +34,16 @@
       "Right-rail and ornament art. Optional entries (source: null) fall back to the built-in look:",
       "expressions[].source  full transparent portrait shown when that expression is picked (falls back to mascot)",
       "expressions[].thumb   square transparent head crop for the picker button (falls back to a zoomed portrait)",
+      "expressions[].hair    combo mode only: hair-only strip from the left of the combo art (tools/combo_hair.py), shown past the rail edge over the chat panel",
       "memo.source           transparent sticky-note PNG (falls back to the CSS paper note)",
       "cornerStar.source     transparent four-point star used on panel corners (falls back to the inline SVG star)"
     ],
     "mascot": {
-      "source": "assets/relit/academy-maid-pensive.png",
-      "maxPx": 768,
-      "webp": true
+      "$comment": "combo: 角色和书桌画在同一张图里（assets/combo/，从 round14 裁出人物附近 1000×1120），陪伴栏改用合成图布局、隐藏 skin.art.desk，表情切换为交叉渐变。",
+      "source": "assets/combo/combo-default.png",
+      "maxPx": 1120,
+      "webp": true,
+      "combo": true
     },
     "workspaceBackground": {
       "source": "assets/academy-panorama-day.jpg"
@@ -52,32 +55,36 @@
       {
         "label": "默认",
         "source": null,
-        "thumb": "assets/relit/expr-default-thumb.png",
-        "maxPx": 768,
+        "thumb": "assets/combo/thumb-default.png",
+        "hair": "assets/combo/hair-default.png",
+        "maxPx": 1120,
         "message": "有什么问题都可以问我哦！\n我会一直在这里！",
         "webp": true
       },
       {
         "label": "开心",
-        "source": "assets/relit/expr-happy.png",
-        "thumb": "assets/relit/expr-happy-thumb.png",
-        "maxPx": 768,
+        "source": "assets/combo/combo-happy.png",
+        "thumb": "assets/combo/thumb-happy.png",
+        "hair": "assets/combo/hair-happy.png",
+        "maxPx": 1120,
         "message": "太好啦！\n我们一起把它做完吧！",
         "webp": true
       },
       {
         "label": "好奇",
-        "source": "assets/relit/expr-curious.png",
-        "thumb": "assets/relit/expr-curious-thumb.png",
-        "maxPx": 768,
+        "source": "assets/combo/combo-curious.png",
+        "thumb": "assets/combo/thumb-curious.png",
+        "hair": "assets/combo/hair-curious.png",
+        "maxPx": 1120,
         "message": "嗯？这个问题很有意思，\n让我想想～",
         "webp": true
       },
       {
         "label": "眨眼",
-        "source": "assets/relit/expr-wink.png",
-        "thumb": "assets/relit/expr-wink-thumb.png",
-        "maxPx": 768,
+        "source": "assets/combo/combo-wink.png",
+        "thumb": "assets/combo/thumb-wink.png",
+        "hair": "assets/combo/hair-wink.png",
+        "maxPx": 1120,
         "message": "交给我吧！\n有我在就放心～",
         "webp": true
       }
@@ -122,7 +129,7 @@
         "webp": true
       },
       "desk": {
-        "source": "assets/ui/desk-v6.png",
+        "source": null,
         "maxPx": 1100,
         "webp": true
       },

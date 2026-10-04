@@ -453,6 +453,54 @@ $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
   filter: none; /* 不加投影：压在浅色对话框上会成一圈灰色光晕 */
 }
 
+/* 合成图模式（logo.config.json 的 skin.mascot.combo）：角色和书桌在同一张图里，四个表情交叉渐变。
+ * 素材是 round14 合成图（1405×1120）裁出的 x 250–1250 一段，即 assets/combo/*.png（1000×1120）。
+ * 合成图里角色相当于立绘（1199×1312）缩小 0.465 倍，立绘框左上角在合成图 (424, −3)，桌面后沿在 y≈520。
+ * 下面按立绘显示高度 --dsh-ch-h 换算，角色显示大小和以前的立绘一样：
+ *   宽 = 1000 / 0.465 / 1199 × 立绘宽 = 1.7936 × --dsh-ch-w；高 = 1120 / 0.465 / 1312 × 立绘高 = 1.8358 × --dsh-ch-h
+ *   左 = 立绘左 − (424 − 250) / 0.465 / 1199 × 立绘宽；上 = 104px − 3 / 0.465 / 1312 × 立绘高
+ * 合成图截在陪伴栏里（书桌不能盖到对话框上）；伸出栏外盖住对话框的只有头发：
+ * assets/combo/hair-*.png 是合成图左侧 x 0–270、y 0–700 的一条，桌面以下只留发丝（tools/combo_hair.py），
+ * 和合成图同一原点、同一比例叠放，只显示陪伴栏左边以外的部分。 */
+$SKIN [data-dsh-academy-rail][data-combo] {
+  --dsh-ch-h: calc(63vh - 70px);
+  --dsh-ch-w: calc(var(--dsh-ch-h) * 0.9139);
+  /* 和立绘一样居中，但不能再往左：桌沿附近的袖子（合成图裁切后 x≈222）必须留在陪伴栏里，
+   * 否则它伸到栏外、又不在头发条里，会被栏边竖着切掉。下限让栏左边落在 x≈205：
+   * --dsh-combo-rail-x ≤ 205 / 1000 × 合成图宽 = 0.3677 × 立绘宽，即 --dsh-ch-x ≥ −0.0556 × 立绘宽。 */
+  --dsh-ch-x: max(calc(-64px + (var(--dsh-rail-w) + 70px) / 2 - var(--dsh-ch-w) / 2), calc(var(--dsh-ch-w) * -0.0556));
+  --dsh-combo-rail-x: calc(var(--dsh-ch-w) * 0.3121 - var(--dsh-ch-x)); /* 陪伴栏左边在合成图元素里的横坐标 */
+}
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 280ms ease;
+}
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
+  position: absolute;
+  top: calc(104px - var(--dsh-ch-h) * 0.0049);
+  bottom: auto;
+  left: calc(var(--dsh-ch-x) - var(--dsh-ch-w) * 0.3121);
+  object-fit: fill;
+  transition: none;
+  pointer-events: none;
+  user-select: none;
+}
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character {
+  width: calc(var(--dsh-ch-w) * 1.7936);
+  height: calc(var(--dsh-ch-h) * 1.8358);
+  clip-path: inset(0 0 0 var(--dsh-combo-rail-x));
+}
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
+  width: calc(var(--dsh-ch-w) * 0.4843);   /* 270 / 1000 × 合成图宽 */
+  height: calc(var(--dsh-ch-h) * 1.1474);  /* 700 / 1120 × 合成图高 */
+  clip-path: inset(0 calc(100% - var(--dsh-combo-rail-x)) 0 0);
+}
+@media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose { transition: none; } }
+$SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; } /* 和以前 @art desk 段一致 */
+
 .dsh-academy-bubble {
   position: absolute;
   right: 16px;
