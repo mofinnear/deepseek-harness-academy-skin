@@ -532,6 +532,10 @@ $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-shadow {
 }
 /* 桌面投影（shadow-*.png，和人物层同一位置、半分辨率）：偏肉色的乘色，正片叠底到书桌上，像漫画的阴影而不是一层黑 */
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-shadow {
+  /* 和书桌一样截到陪伴栏内：人物层不截（头发要伸出去），阴影层要截，否则栏外那段桌面阴影会叠在白色对话框上成一块灰。
+   * 阴影层左边相对合成图左边是 0.4125 × 立绘宽（= 0.3121 + 0.1004），所以栏左边在阴影层里的横坐标
+   * = --dsh-combo-rail-x − 0.4125 × 立绘宽。 */
+  clip-path: inset(0 0 0 max(0px, calc(var(--dsh-combo-rail-x) - var(--dsh-ch-w) * 0.4125)));
   position: absolute;
   object-fit: fill;
   mix-blend-mode: multiply;

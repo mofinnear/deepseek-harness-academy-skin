@@ -91,6 +91,7 @@ def char_layer(src, shade=True, gpt=None):
         c = np.asarray(Image.fromarray((np.clip(c, 0, 1) * 255).astype('uint8')).resize((W // S, (H + PAD) // S),
                                                                                        Image.LANCZOS)) / 255
         f = np.minimum(f, 1 - np.clip(c * 1.3, 0, 1)[..., None] * (1 - np.asarray(CONTACT_TINT)))
+        f[f.min(-1) > 0.985] = 1                           # 压暗不到 1.5% 的极淡部分去掉，免得留下浅色方块
         sa = 1 - f.min(-1)                                 # 正片叠底：底色 × (1 − a + a × col) = 底色 × f
         col = 1 - (1 - f) / np.maximum(sa[..., None], 1e-3)
         shadow = np.zeros(f.shape[:2] + (4,))
