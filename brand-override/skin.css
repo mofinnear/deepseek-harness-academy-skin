@@ -509,12 +509,20 @@ $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-combo-front {
   height: calc(var(--dsh-ch-h) * 1.8358);
   clip-path: inset(0 0 0 var(--dsh-combo-rail-x));
 }
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character {
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-character,
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-shadow {
   top: calc(104px - var(--dsh-ch-h) * 0.0098);
   left: var(--dsh-ch-x);
   width: var(--dsh-ch-w);
   height: calc(var(--dsh-ch-h) * 1.0305);
   clip-path: none;
+}
+/* 桌面投影（shadow-*.png，和人物层同一位置、半分辨率）：偏肉色的乘色，正片叠底到书桌上，像漫画的阴影而不是一层黑 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-combo-shadow {
+  position: absolute;
+  object-fit: fill;
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair {
   width: calc(var(--dsh-ch-w) * 0.4843);   /* 270 / 1000 × 合成图宽 */

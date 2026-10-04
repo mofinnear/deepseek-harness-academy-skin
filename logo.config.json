@@ -34,6 +34,7 @@
       "Right-rail and ornament art. Optional entries (source: null) fall back to the built-in look:",
       "expressions[].source  full transparent portrait shown when that expression is picked (falls back to mascot)",
       "expressions[].thumb   square transparent head crop for the picker button (falls back to a zoomed portrait)",
+      "expressions[].shadow  layered combo mode: warm contact shadow under the figure, multiplied onto the desk (tools/char_layers.py)",
       "expressions[].hair    combo mode without mascot.desk only: hair-only strip from the left of the combo art (tools/combo_hair.py), shown past the rail edge over the chat panel",
       "memo.source           transparent sticky-note PNG (falls back to the CSS paper note)",
       "cornerStar.source     transparent four-point star used on panel corners (falls back to the inline SVG star)"
@@ -58,6 +59,7 @@
         "label": "默认",
         "source": null,
         "thumb": "assets/combo/thumb-default.png",
+        "shadow": "assets/combo/shadow-default.png",
         "maxPx": 1700,
         "message": "有什么问题都可以问我哦！\n我会一直在这里！",
         "webp": true
@@ -66,6 +68,7 @@
         "label": "开心",
         "source": "assets/combo/char-happy.png",
         "thumb": "assets/combo/thumb-happy.png",
+        "shadow": "assets/combo/shadow-happy.png",
         "maxPx": 1700,
         "message": "太好啦！\n我们一起把它做完吧！",
         "webp": true
@@ -74,6 +77,7 @@
         "label": "好奇",
         "source": "assets/combo/char-curious.png",
         "thumb": "assets/combo/thumb-curious.png",
+        "shadow": "assets/combo/shadow-curious.png",
         "maxPx": 1700,
         "message": "嗯？这个问题很有意思，\n让我想想～",
         "webp": true
@@ -82,6 +86,7 @@
         "label": "眨眼",
         "source": "assets/combo/char-wink.png",
         "thumb": "assets/combo/thumb-wink.png",
+        "shadow": "assets/combo/shadow-wink.png",
         "maxPx": 1700,
         "message": "交给我吧！\n有我在就放心～",
         "webp": true

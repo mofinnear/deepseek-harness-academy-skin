@@ -303,12 +303,14 @@ function buildSkinAssets(config) {
     const portrait = optional(entry);
     const thumb = optional(entry.thumb ? { source: entry.thumb, maxPx: 160 } : null);
     const hair = optional(entry.hair ? { source: entry.hair, maxPx: 700, webp: true } : null);
+    const shadow = optional(entry.shadow ? { source: entry.shadow, maxPx: 1352, webp: true } : null);
     return {
       label: entry.label,
       message: entry.message ?? null,
       src: portrait ? portrait.src : null,
       thumb: thumb ? thumb.src : null,
       hair: hair ? hair.src : null,
+      shadow: shadow ? shadow.src : null,
     };
   });
   const art = Object.fromEntries(ART_KEYS.map((key) => [key, Boolean(config.skin.art?.[key]?.source)]));

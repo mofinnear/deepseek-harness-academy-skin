@@ -308,6 +308,7 @@ window.__ModuleLoader__.load({
           src: entry.src || skinAssets.mascot,
           thumb: entry.thumb || entry.src || skinAssets.mascot,
           hair: entry.hair || '',
+          shadow: entry.shadow || '',
           cropThumb: !entry.thumb
         };
       });
@@ -350,6 +351,7 @@ window.__ModuleLoader__.load({
           /* The desk and the quill/inkwell inside a layered pose keep their art. */
           if (img.classList.contains('dsh-academy-character')) img.src = entry.src;
           else if (img.classList.contains('dsh-academy-hair')) img.src = entry.hair;
+          else if (img.classList.contains('dsh-academy-combo-shadow')) img.src = entry.shadow;
           images.push(img);
         });
         return images;
@@ -415,7 +417,7 @@ window.__ModuleLoader__.load({
       img.className = className;
       img.alt = '';
       img.draggable = false;
-      img.src = src;
+      if (src) img.src = src;
       return img;
     }
 
@@ -449,7 +451,9 @@ window.__ModuleLoader__.load({
            * so its hair spills over the chat panel, quill and inkwell on top. */
           rail.setAttribute('data-layered', '');
           /* Desk, figure and quill switch together as one picture. */
-          pose.append(comboImage('dsh-academy-combo-desk', skinAssets.comboDesk), character);
+          /* The shadow multiplies onto the desk (mix-blend-mode in skin.css): a warm
+           * tint like a cel-shaded shadow instead of a dark overlay. */
+          pose.append(comboImage('dsh-academy-combo-desk', skinAssets.comboDesk), comboImage('dsh-academy-combo-shadow', ''), character);
           if (skinAssets.comboFront) pose.appendChild(comboImage('dsh-academy-combo-front', skinAssets.comboFront));
           comboStack = [pose];
         } else {
@@ -536,7 +540,7 @@ window.__ModuleLoader__.load({
         /* Decode every pose up front so a pick fades in at once, not after a
          * ~0.4 s decode of the large data URI. */
         expressionTable().forEach(function (entry) {
-          [entry.src, entry.hair].forEach(function (src) {
+          [entry.src, entry.hair, entry.shadow].forEach(function (src) {
             if (!src) return;
             var img = new Image();
             img.src = src;
