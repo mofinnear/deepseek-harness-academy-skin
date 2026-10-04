@@ -498,7 +498,7 @@ $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose {
   transition: opacity 150ms ease; /* 短：两层重叠时手和头发会出现重影 */
 }
 $SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-pose {
-  transition-duration: 220ms; /* 每组都带同一张书桌：新的一组先完整淡入，旧的再淡出（client.js） */
+  transition-duration: 150ms; /* 每组都带同一张书桌：新的一组先淡入，快满时旧的一组 80ms 淡出（client.js） */
 }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-character,
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-hair,
@@ -582,9 +582,11 @@ body[data-dsh-anime-skin-stage="focus"] [data-dsh-academy-desk-back],
 $SKIN:not(:has([data-rightbar-collapsed="true"])) [data-dsh-academy-desk-back] { display: none; }
 @media (prefers-reduced-motion: reduce) { $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-pose, $SKIN [data-dsh-academy-desk-back] .dsh-academy-pose { transition: none; } }
 $SKIN [data-dsh-academy-rail][data-combo] .dsh-academy-bubble { bottom: 132px; } /* 和以前 @art desk 段一致 */
-/* 固定书桌 + 人物层：气泡往上挪到墨水瓶下面（用户要求）。墨水瓶底在书桌图 y≈601，换成屏幕：
- * 合成图上沿 104px − 0.0049 × 立绘高，每个合成图像素 0.0016391 × 立绘高 → 104px + 0.9802 × 立绘高，再空 8px。 */
-$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-bubble { top: calc(104px + var(--dsh-ch-h) * 0.9802 + 8px); bottom: auto; }
+/* 固定书桌 + 人物层：气泡在墨水瓶下面。墨水瓶底在书桌图 y≈601，换成屏幕：
+ * 合成图上沿 104px − 0.0049 × 立绘高，每个合成图像素 0.0016391 × 立绘高 → 104px + 0.9802 × 立绘高。
+ * 再空 30px：空 8px 时气泡上沿压在桌上的纸张上，同是米白色看不清（用户要求往下挪）。 */
+/* 窗口矮时立绘缩小得比表情按钮上移慢，气泡会压到按钮：上限 = 栏底 − 按钮底距 22 − 按钮高（≤100）− 12 − 气泡高（约 100）。 */
+$SKIN [data-dsh-academy-rail][data-layered] .dsh-academy-bubble { top: min(calc(104px + var(--dsh-ch-h) * 0.9802 + 30px), calc(100% - 234px)); bottom: auto; }
 
 .dsh-academy-bubble {
   position: absolute;

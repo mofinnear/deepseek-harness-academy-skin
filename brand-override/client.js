@@ -385,17 +385,21 @@ window.__ModuleLoader__.load({
           /* Only poses stacked below this one, so a quicker later pick survives. */
           var below = [];
           for (var prev = next.previousElementSibling; prev && prev.classList.contains('dsh-academy-pose'); prev = prev.previousElementSibling) below.push(prev);
-          /* Layered poses carry the same desk, so the new pose fades in fully over
-           * the old one (the picture changes as a whole and never dims), then the
-           * old one fades out (only its hair outside the new figure still shows)
-           * and is dropped. Older combo art overlaps the two fades instead. */
+          /* Layered poses carry the same desk, so the new pose fades in (150ms)
+           * over the old one and the old one fades out quickly (80ms) only once
+           * the new one is nearly opaque: the desk never visibly dims, and the old
+           * figure (hands, hair outside the new figure) does not linger as a
+           * ghost. Older combo art overlaps the two fades instead. */
           var layered = Boolean(skinAssets.comboDesk);
           window.setTimeout(function () {
-            below.forEach(function (node) { node.style.opacity = '0'; });
-          }, layered ? 220 : 70);
+            below.forEach(function (node) {
+              if (layered) node.style.transitionDuration = '80ms';
+              node.style.opacity = '0';
+            });
+          }, layered ? 100 : 70);
           window.setTimeout(function () {
             below.forEach(function (node) { node.remove(); });
-          }, layered ? 480 : 300);
+          }, layered ? 200 : 300);
         });
       };
       Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
