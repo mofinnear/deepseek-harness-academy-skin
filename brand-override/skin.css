@@ -137,11 +137,28 @@ $SKIN [data-dsh-academy-new-chat] {
 $SKIN [data-dsh-academy-recent-heading] { color: #f7f9ff !important; font-weight: 700 !important; }
 $SKIN [data-dsh-academy-plugin-link] { display: none !important; }
 
-/* 会话列表：隐藏工作区分组行，保留真实会话 */
-$SKIN [role="treeitem"][data-row-key^="workspace:"] { display: none !important; }
+/* 会话列表：工作区文件夹行 + 会话。
+ * 以前按效果图把工作区分组行藏起来了（当时只有一个工作区）；有多个工作区时就看不出会话属于哪个文件夹，
+ * 也没法折叠（用户发现）。现在显示文件夹行：金色文件夹图标（行里第一个图标）、浅色加粗名字；会话往右缩进。
+ * 鼠标移上去时右边的「更多操作 / 在该工作区新建会话」按钮、点击折叠都是 Harness 原生的，皮肤不改。 */
+$SKIN [role="treeitem"][data-row-key^="workspace:"] {
+  min-height: 34px;
+  margin: 10px 6px 2px !important;
+  padding-left: 10px !important;
+  border-radius: 8px;
+  color: #dfe9ff !important;
+  font-weight: 650;
+  letter-spacing: .02em;
+  background: transparent !important;
+}
+$SKIN [role="treeitem"][data-row-key^="workspace:"]:first-child { margin-top: 2px !important; }
+$SKIN [role="treeitem"][data-row-key^="workspace:"] > span:first-child { color: #e8c374 !important; }
+$SKIN [role="treeitem"][data-row-key^="workspace:"]:hover { background: #ffffff10 !important; }
+/* 「展开其余 N 个会话」：和会话一样缩进，浅色小字 */
+$SKIN [role="tree"] button[data-row-key^="overflow:"] { margin-left: 22px !important; color: #a9bde6 !important; font-size: 12.5px; }
 $SKIN [role="treeitem"][data-row-key^="session:"] {
   min-height: 52px;
-  margin: 4px 6px;
+  margin: 4px 6px 4px 18px;
   padding-left: 12px !important;
   border: 1px solid transparent;
   border-radius: 10px;

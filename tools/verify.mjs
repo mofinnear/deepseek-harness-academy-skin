@@ -80,7 +80,7 @@ if (themeCssMatch) {
   record('calibration stage hides interface children but preserves body background', /body\[data-dsh-anime-skin-stage="background-only"\]\s*>\s*:not\(style\):not\(script\),\s*body\[data-dsh-anime-skin-stage="background-only"\]\s*>\s*:not\(style\):not\(script\)\s+\*\s*\{\s*visibility:\s*hidden\s*!important;/.test(css));
   const sidebar = rule(`${SKIN} div:has(> div > [data-slot="sidebar.workspaces"])`);
   record('sidebar is a floating rounded card with its own background', sidebar.includes('border-radius: 22px') && sidebar.includes('var(--dsh-anime-sidebar-background-src)'));
-  record('workspace header row is hidden by row key, sessions stay visible', css.includes(`${SKIN} [role="treeitem"][data-row-key^="workspace:"] { display: none !important; }`));
+  record('workspace folder rows are shown and styled, sessions stay visible', !/\[data-row-key\^="workspace:"\]\s*\{\s*display:\s*none/.test(css) && /\[role="treeitem"\]\[data-row-key\^="workspace:"\]\s*\{/.test(css) && /\[role="treeitem"\]\[data-row-key\^="session:"\]\s*\{/.test(css));
   const column = rule(`${SKIN} div:has(> [data-slot="main"])`);
   const panel = rule(`${SKIN} div[data-phase]:has(> [data-conversation-content])`);
   record('conversation column reserves room for the right rail', column.includes('calc(var(--dsh-rail-w) + 6px)'));
