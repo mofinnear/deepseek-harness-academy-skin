@@ -598,15 +598,21 @@ window.__ModuleLoader__.load({
      * next paint), so a new composer is measured before its first frame. */
     var observedComposers = [];
 
-    function observeComposerHeight() {
-      if (!composerSizer) return;
-      /* Switching conversations replaces the composer; stop observing the removed
-       * ones so the observer does not keep detached DOM alive. */
+    /* Switching conversations replaces the composer; stop observing the removed
+     * ones so the observer does not keep detached DOM alive. Runs on every DOM
+     * change, also while the skin is off (the cards observed earlier stay listed). */
+    function releaseDetachedComposers() {
+      if (!composerSizer || !observedComposers.length) return;
       observedComposers = observedComposers.filter(function (card) {
         if (card.isConnected) return true;
         composerSizer.unobserve(card);
         return false;
       });
+    }
+
+    function observeComposerHeight() {
+      if (!composerSizer) return;
+      releaseDetachedComposers();
       document.querySelectorAll('[data-composer-card]:not([data-dsh-sized])').forEach(function (card) {
         card.setAttribute('data-dsh-sized', '');
         writeComposerHeight(card);
@@ -971,6 +977,7 @@ window.__ModuleLoader__.load({
           new MutationObserver(function updateAcademySidebar() {
             /* Not debounced: a replaced composer must be sized before it paints. */
             if (document.body.hasAttribute('data-dsh-anime-skin')) observeComposerHeight();
+            else releaseDetachedComposers();
             if (relabelQueued) return;
             relabelQueued = true;
             /* setTimeout, not requestAnimationFrame: rAF is paused while the window is hidden. */

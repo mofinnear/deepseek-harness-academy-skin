@@ -18,7 +18,7 @@
  *   node tools/install.mjs --revert          # only removes the plugin if it is this skin (--force to override)
  */
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +75,24 @@ function mergePatch(text, enabled) {
   return `${text}\n${PATCH_BLOCK}`;
 }
 
+const RECORD_NAME = '.academy-install';
+
+/**
+ * Install record kept inside the plugin directory, the same file the one-click
+ * scripts write: `added_row` (1 = we added the loader row, so uninstall removes
+ * it; 0 = it was there before) and `previous_plugin` (backup of a different
+ * plugin that sat at this path before install, put back on uninstall).
+ * @param target - installed plugin directory.
+ * @returns the record, or null when there is none (older installs).
+ */
+function readRecord(target) {
+  const file = join(target, RECORD_NAME);
+  if (!existsSync(file)) return null;
+  const text = readFileSync(file, 'utf8');
+  const get = (key) => (new RegExp(`^${key}=(.*)$`, 'm').exec(text) || [])[1] ?? '';
+  return { addedRow: get('added_row') !== '0', previousPlugin: get('previous_plugin').trim() };
+}
+
 /**
  * Whether the installed plugin directory is this skin. The same path
  * `@local/dsh-logo` was used before by a plain logo plugin (its description says
@@ -105,7 +123,9 @@ function backupBeforeChange(patchPath, target, label) {
   const d = new Date();
   const two = (n) => String(n).padStart(2, '0');
   const stamp = `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}`;   /* 本地时间，和安装脚本一致 */
-  const dir = join(process.env.DSH_SKIN_BACKUP_DIR || join(home, 'academy-skin-backup'), `${stamp}-${label}`);
+  const base = join(process.env.DSH_SKIN_BACKUP_DIR || join(home, 'academy-skin-backup'), `${stamp}-${label}`);
+  let dir = base;
+  for (let n = 1; existsSync(dir); n += 1) dir = `${base}-${n}`;   /* 同一秒里运行两次也不共用备份目录 */
   mkdirSync(dir, { recursive: true });
   if (existsSync(patchPath)) cpSync(patchPath, join(dir, 'cordis.patch.yml'));
   if (existsSync(target)) cpSync(target, join(dir, 'dsh-logo'), { recursive: true });
@@ -166,24 +186,47 @@ function main() {
     if (!isOurPlugin(target) && !argv.includes('--force')) {
       throw new Error(`${target} is not this skin (package.json does not say "anime-academy skin"); left untouched. Re-run with --force to remove it anyway.`);
     }
+    const record = (existsSync(target) && readRecord(target)) || { addedRow: true, previousPlugin: '' };
+    if (record.previousPlugin && !existsSync(record.previousPlugin)) {
+      throw new Error(`a different plugin sat here before install, but its backup ${record.previousPlugin} is gone; left untouched. Delete ${join(target, RECORD_NAME)} first if you do not need it back.`);
+    }
     backupBeforeChange(patchPath, target, '卸载前');
-    /* Config first, plugin second: if the config cannot be written, nothing has been removed yet. */
-    if (existsSync(patchPath)) writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
+    /* Config first, plugin second: if the config cannot be written, nothing has been removed yet.
+     * A loader row that was there before install stays. */
+    if (record.addedRow && existsSync(patchPath)) writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
     rmSync(target, { recursive: true, force: true });
-    console.log('\nReverted. Restart the DSH desktop app to drop the override.');
+    if (record.previousPlugin) {
+      cpSync(record.previousPlugin, target, { recursive: true });
+      console.log(`[restore] put back the plugin that was here before install (${record.previousPlugin})`);
+    }
+    /* Remove node_modules/@local and node_modules only if install left them empty. */
+    for (const dir of [dirname(target), dirname(dirname(target))]) {
+      try { if (readdirSync(dir).length === 0) rmdirSync(dir); } catch { /* not there or not empty */ }
+    }
+    console.log('\nReverted to the state before install. Restart the DSH desktop app.');
     return;
   }
 
   if (!existsSync(bundle)) throw new Error(`built bundle missing: ${bundle} — run \`node tools/build.mjs\` first`);
-  backupBeforeChange(patchPath, target, '安装前');
   /* Work out the config change first so a conflicting row stops us before any file is touched. */
-  const nextPatch = mergePatch(existsSync(patchPath) ? readFileSync(patchPath, 'utf8') : '', true);
+  const currentPatch = existsSync(patchPath) ? readFileSync(patchPath, 'utf8') : '';
+  const nextPatch = mergePatch(currentPatch, true);
+  const rowExisted = OUR_ROW_RE.test(currentPatch);
+  const targetExisted = existsSync(target);
+  const targetIsOurs = targetExisted && isOurPlugin(target);
+  const oldRecord = targetIsOurs ? readRecord(target) : null;
+  const backupDir = backupBeforeChange(patchPath, target, '安装前');
   rmSync(target, { recursive: true, force: true });
   mkdirSync(target, { recursive: true });
   for (const entry of ['package.json', 'index.js', 'dist']) {
     cpSync(join(PLUGIN_SRC, entry), join(target, entry), { recursive: true });
   }
   writeFileSync(patchPath, nextPatch);
+  /* Upgrading keeps the old record; a newer install of ours is never "the plugin from before". */
+  const addedRow = rowExisted ? (targetIsOurs ? (oldRecord ? oldRecord.addedRow : true) : false) : true;
+  const previousPlugin = targetIsOurs ? (oldRecord ? oldRecord.previousPlugin : '') : targetExisted ? join(backupDir, 'dsh-logo') : '';
+  writeFileSync(join(target, RECORD_NAME), `added_row=${addedRow ? 1 : 0}\nprevious_plugin=${previousPlugin}\n`);
+  if (previousPlugin) console.log(`[record] a different plugin was here before install; backed up to ${previousPlugin} and put back on --revert`);
   console.log('\nInstalled. Restart the DSH desktop app, then reload the Web GUI page.');
 }
 
