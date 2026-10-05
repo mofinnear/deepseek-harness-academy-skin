@@ -77,8 +77,8 @@ tools/package_share.sh <输出目录> [预览图目录]
 
 | 层级 | 作者 | 说明 |
 | --- | --- | --- |
-| 原始角色「鲸鱼娘」 | 上善无形 | CC BY-NC-SA 4.0（2026-08-02 公开声明） |
-| 「DeepSeek 元素 + 女仆鲸鱼娘」二次设计 | ZipZipPipe | 基于上善无形的鲸鱼娘二创，CC BY-NC-SA 4.0 |
+| 原始角色「鲸鱼娘」 | 上善无形 | CC BY-NC-SA 4.0（[2026-08-02 公开声明](https://www.bilibili.com/opus/1231977657712771073)） |
+| 「DeepSeek 元素 + 女仆鲸鱼娘」二次设计 | ZipZipPipe | 基于上善无形的鲸鱼娘二创，CC BY-NC-SA 4.0（[作品与声明](https://www.bilibili.com/video/BV1VujS6MEJt/)） |
 | 本皮肤「星海书院」 | mofinnear | 以上述形象为参考，用 AI 重新绘制立绘、表情、书桌场景、背景和界面装饰并加工，做成 DeepSeek Harness 皮肤 |
 
 欢迎分享、修改和继续二创，但请：署名（注明以上三层作者、附协议链接、说明你的修改），不用于商业目的，衍生作品继续采用 CC BY-NC-SA 4.0。
