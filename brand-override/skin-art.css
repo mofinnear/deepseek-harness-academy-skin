@@ -117,9 +117,10 @@ $SKIN div:has(> div > [data-slot="sidebar.workspaces"])::after {
  * 金线间距 274 对应输入框高度 H，整张图按 k = H/274 缩放：
  *   上外扩 39k ≈ 14.2% H，下外扩 41k ≈ 15.0% H，左右外扩 69k ≈ 0.252H，两端切片宽 420k ≈ 1.533H。
  * 半圆半径 137k 正好是 H/2，与 border-radius: 999px 的胶囊重合。
- * H 由 client.js 用 ResizeObserver 写到 --dsh-composer-h 上（没有时按 98px 计算）。 */
+ * H 由 client.js 写到 --dsh-composer-h 上：新输入框一出现就量（MutationObserver 回调里，不等防抖），之后 ResizeObserver 跟踪；
+ * 还没量到时用上一个输入框的高度 --dsh-composer-last-h，再没有才按 98px。 */
 $SKIN [data-composer-card] {
-  --dsh-ch: var(--dsh-composer-h, 98px);
+  --dsh-ch: var(--dsh-composer-h, var(--dsh-composer-last-h, 98px)); /* 还没量到时先用上一个输入框的高度（切换会话时输入框会被换掉） */
   isolation: isolate;
   border-color: transparent !important;
   border-radius: 999px !important;

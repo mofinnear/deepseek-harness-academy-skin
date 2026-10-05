@@ -579,17 +579,27 @@ window.__ModuleLoader__.load({
      * The composer frame art is scaled to the composer's height so its end caps
      * stay true semicircles; CSS cannot read an element's own height, so write it.
      */
+    function writeComposerHeight(card) {
+      var height = Math.round(card.getBoundingClientRect().height);
+      if (height <= 0) return;
+      card.style.setProperty('--dsh-composer-h', height + 'px');
+      /* Fallback for the next card: switching conversations replaces the composer,
+       * and until the new one is measured its frame would use the 98px default
+       * and visibly shrink for a few frames. */
+      if (document.body) document.body.style.setProperty('--dsh-composer-last-h', height + 'px');
+    }
+
     var composerSizer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(function (entries) {
-      entries.forEach(function (entry) {
-        var height = Math.round(entry.target.getBoundingClientRect().height);
-        if (height > 0) entry.target.style.setProperty('--dsh-composer-h', height + 'px');
-      });
+      entries.forEach(function (entry) { writeComposerHeight(entry.target); });
     });
 
+    /* Called straight from the MutationObserver callback (a microtask, before the
+     * next paint), so a new composer is measured before its first frame. */
     function observeComposerHeight() {
       if (!composerSizer) return;
       document.querySelectorAll('[data-composer-card]:not([data-dsh-sized])').forEach(function (card) {
         card.setAttribute('data-dsh-sized', '');
+        writeComposerHeight(card);
         composerSizer.observe(card);
       });
     }
@@ -948,6 +958,8 @@ window.__ModuleLoader__.load({
         if (document.body && typeof MutationObserver !== 'undefined') {
           var relabelQueued = false;
           new MutationObserver(function updateAcademySidebar() {
+            /* Not debounced: a replaced composer must be sized before it paints. */
+            if (document.body.hasAttribute('data-dsh-anime-skin')) observeComposerHeight();
             if (relabelQueued) return;
             relabelQueued = true;
             /* setTimeout, not requestAnimationFrame: rAF is paused while the window is hidden. */
