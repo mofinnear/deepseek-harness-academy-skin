@@ -18,7 +18,7 @@
  *   node tools/install.mjs --revert          # only removes the plugin if it is this skin (--force to override)
  */
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -90,7 +90,28 @@ function readRecord(target) {
   if (!existsSync(file)) return null;
   const text = readFileSync(file, 'utf8');
   const get = (key) => (new RegExp(`^${key}=(.*)$`, 'm').exec(text) || [])[1] ?? '';
-  return { addedRow: get('added_row') !== '0', previousPlugin: get('previous_plugin').trim() };
+  return { addedRow: get('added_row') !== '0', previousPlugin: get('previous_plugin').trim(), createdPatch: get('created_patch') === '1' };
+}
+
+/**
+ * For an older install without a record: the backup taken just before this
+ * chain of installs began. Newest first, skipping backups that already hold
+ * this skin (those come from upgrades); the first remaining one shows how
+ * things were before the skin. Falls back to the project's first snapshot.
+ * @param skip - the backup made by the current run.
+ * @returns a backup directory or ''.
+ */
+function findPreSkinBackup(skip) {
+  const root = process.env.DSH_SKIN_BACKUP_DIR || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'academy-skin-backup');
+  let names = [];
+  try { names = readdirSync(root).filter((name) => name.includes('-安装前')).sort().reverse(); } catch { /* no backups yet */ }
+  for (const name of names) {
+    const dir = join(root, name);
+    if (dir === skip) continue;
+    if (existsSync(join(dir, 'dsh-logo')) && isOurPlugin(join(dir, 'dsh-logo'))) continue;
+    return dir;
+  }
+  return existsSync(BACKUP_DIR) ? BACKUP_DIR : '';
 }
 
 /**
@@ -186,7 +207,7 @@ function main() {
     if (!isOurPlugin(target) && !argv.includes('--force')) {
       throw new Error(`${target} is not this skin (package.json does not say "anime-academy skin"); left untouched. Re-run with --force to remove it anyway.`);
     }
-    const record = (existsSync(target) && readRecord(target)) || { addedRow: true, previousPlugin: '' };
+    const record = (existsSync(target) && readRecord(target)) || { addedRow: true, previousPlugin: '', createdPatch: false };
     if (record.previousPlugin && !existsSync(record.previousPlugin)) {
       throw new Error(`a different plugin sat here before install, but its backup ${record.previousPlugin} is gone; left untouched. Delete ${join(target, RECORD_NAME)} first if you do not need it back.`);
     }
@@ -194,6 +215,8 @@ function main() {
     /* Config first, plugin second: if the config cannot be written, nothing has been removed yet.
      * A loader row that was there before install stays. */
     if (record.addedRow && existsSync(patchPath)) writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
+    /* The patch file was created by install and holds nothing else now: remove it again. */
+    if (record.createdPatch && existsSync(patchPath) && !readFileSync(patchPath, 'utf8').trim()) rmSync(patchPath);
     rmSync(target, { recursive: true, force: true });
     if (record.previousPlugin) {
       cpSync(record.previousPlugin, target, { recursive: true });
@@ -216,16 +239,63 @@ function main() {
   const targetIsOurs = targetExisted && isOurPlugin(target);
   const oldRecord = targetIsOurs ? readRecord(target) : null;
   const backupDir = backupBeforeChange(patchPath, target, '安装前');
-  rmSync(target, { recursive: true, force: true });
-  mkdirSync(target, { recursive: true });
-  for (const entry of ['package.json', 'index.js', 'dist']) {
-    cpSync(join(PLUGIN_SRC, entry), join(target, entry), { recursive: true });
+
+  /* Install record. Upgrading keeps the old one; an older install without a record
+   * is reconstructed from the backup taken before the skin first went in. A newer
+   * install of ours is never "the plugin from before". */
+  let addedRow; let previousPlugin; let createdPatch;
+  if (targetIsOurs && oldRecord) {
+    ({ addedRow, previousPlugin, createdPatch } = oldRecord);
+  } else if (targetIsOurs) {
+    const orig = findPreSkinBackup(backupDir);
+    if (orig) {
+      console.log(`[record] older install without a record; reconstructed from ${orig}`);
+      const origPatch = join(orig, 'cordis.patch.yml');
+      previousPlugin = existsSync(join(orig, 'dsh-logo')) ? join(orig, 'dsh-logo') : '';
+      createdPatch = !existsSync(origPatch);
+      addedRow = createdPatch || !OUR_ROW_RE.test(readFileSync(origPatch, 'utf8'));
+    } else {
+      addedRow = true; previousPlugin = ''; createdPatch = false;
+    }
+  } else {
+    addedRow = false;
+    previousPlugin = targetExisted ? join(backupDir, 'dsh-logo') : '';
+    createdPatch = !existsSync(patchPath);
   }
-  writeFileSync(patchPath, nextPatch);
-  /* Upgrading keeps the old record; a newer install of ours is never "the plugin from before". */
-  const addedRow = rowExisted ? (targetIsOurs ? (oldRecord ? oldRecord.addedRow : true) : false) : true;
-  const previousPlugin = targetIsOurs ? (oldRecord ? oldRecord.previousPlugin : '') : targetExisted ? join(backupDir, 'dsh-logo') : '';
-  writeFileSync(join(target, RECORD_NAME), `added_row=${addedRow ? 1 : 0}\nprevious_plugin=${previousPlugin}\n`);
+  if (!rowExisted) addedRow = true;
+
+  /* Stage the new plugin and its record next to the target, then swap it in with one
+   * rename: a failure while copying leaves everything as it was. */
+  const stage = join(dirname(target), `.dsh-logo-staging-${process.pid}`);
+  try {
+    rmSync(stage, { recursive: true, force: true });
+    mkdirSync(stage, { recursive: true });
+    for (const entry of ['package.json', 'index.js', 'dist']) {
+      cpSync(join(PLUGIN_SRC, entry), join(stage, entry), { recursive: true });
+    }
+    writeFileSync(join(stage, RECORD_NAME), `added_row=${addedRow ? 1 : 0}\nprevious_plugin=${previousPlugin}\ncreated_patch=${createdPatch ? 1 : 0}\n`);
+  } catch (error) {
+    rmSync(stage, { recursive: true, force: true });
+    throw new Error(`could not prepare the plugin files; nothing was changed (${error.message})`);
+  }
+  const restoreOldPlugin = () => {
+    rmSync(target, { recursive: true, force: true });
+    if (existsSync(join(backupDir, 'dsh-logo'))) cpSync(join(backupDir, 'dsh-logo'), target, { recursive: true });
+  };
+  try {
+    rmSync(target, { recursive: true, force: true });
+    renameSync(stage, target);
+  } catch (error) {
+    rmSync(stage, { recursive: true, force: true });
+    restoreOldPlugin();
+    throw new Error(`could not swap in the plugin; the old plugin was put back (${error.message})`);
+  }
+  try {
+    if (nextPatch !== currentPatch || !existsSync(patchPath)) writeFileSync(patchPath, nextPatch);
+  } catch (error) {
+    restoreOldPlugin();
+    throw new Error(`could not write ${patchPath}; the plugin was put back as before (${error.message})`);
+  }
   if (previousPlugin) console.log(`[record] a different plugin was here before install; backed up to ${previousPlugin} and put back on --revert`);
   console.log('\nInstalled. Restart the DSH desktop app, then reload the Web GUI page.');
 }

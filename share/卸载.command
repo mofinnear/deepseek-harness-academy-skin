@@ -11,9 +11,10 @@ BACKUP_BASE="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%
 BACKUP="$BACKUP_BASE"; n=1; while [ -e "$BACKUP" ]; do BACKUP="$BACKUP_BASE-$n"; n=$((n+1)); done
 
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
-# 加载项：ID 是 local-dsh-logo 且路径是本皮肤的，才算「本皮肤的那一条」（兼容 \r\n）
-has_our_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/\@local\/dsh-logo\/index\.js[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
-has_any_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
+# 加载项：ID 是 local-dsh-logo 且路径是本皮肤的，才算「本皮肤的那一条」（兼容 \r\n）。
+# 整个文件读进来再判断：perl -0ne 在空文件上一次都不执行、退出码是 0，会把空文件误判成「有这一行」
+has_our_row() { [ -f "$PATCH" ] && perl -e 'local $/; my $t = <>; exit((defined $t && $t =~ /^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/\@local\/dsh-logo\/index\.js[ \t]*\r?$/m) ? 0 : 1)' "$PATCH"; }
+has_any_row() { [ -f "$PATCH" ] && perl -e 'local $/; my $t = <>; exit((defined $t && $t =~ /^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m) ? 0 : 1)' "$PATCH"; }
 
 echo "== 星海书院皮肤 · 卸载 =="
 if [ ! -d "$TARGET" ] && ! has_our_row; then
@@ -29,10 +30,11 @@ if [ -d "$TARGET" ] && ! grep -q "anime-academy skin" "$TARGET/package.json" 2>/
 fi
 
 # 安装记录（安装脚本写在插件目录里）：没有记录的是老版本装的，当时加载项都是新加的
-ADDED=1; PREV=""
+ADDED=1; PREV=""; CREATED=0
 if [ -f "$TARGET/.academy-install" ]; then
   ADDED="$(sed -n 's/^added_row=//p' "$TARGET/.academy-install")"; ADDED="${ADDED:-1}"
   PREV="$(sed -n 's/^previous_plugin=//p' "$TARGET/.academy-install")"
+  CREATED="$(sed -n 's/^created_patch=//p' "$TARGET/.academy-install")"; CREATED="${CREATED:-0}"
 fi
 if [ -n "$PREV" ] && [ ! -d "$PREV" ]; then
   fail "安装前那里另有一个插件，它的备份 $PREV 已经不在了，卸载后没法放回去。为安全起见没有做任何改动；如确定不需要它，请先删掉 $TARGET/.academy-install 再卸载。"
@@ -57,6 +59,10 @@ elif [ -f "$PATCH" ]; then
     || fail "修改 $PATCH 失败，插件文件没有删除。备份在 $BACKUP"
   # perl -i 写不进去时（如目录只读）只打印警告、退出码仍是 0，所以再确认一次那一行真的没了
   if has_our_row; then fail "没能修改 $PATCH（可能没有写权限），插件文件没有删除。备份在 $BACKUP"; fi
+fi
+# 配置文件是安装时新建的、现在又只剩空白：删掉，回到安装前「没有这个文件」的样子
+if [ "$CREATED" = 1 ] && [ -f "$PATCH" ] && ! grep -q '[^[:space:]]' "$PATCH"; then
+  rm -f "$PATCH"
 fi
 rm -rf "$TARGET" || fail "删除插件文件失败。"
 if [ -n "$PREV" ]; then

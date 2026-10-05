@@ -31,12 +31,13 @@ if (Test-Path $Target) {
   if (-not $isOurs) { Fail "$Target 不是星海书院皮肤（package.json 里没有 anime-academy skin），为安全起见没有删除。如确定要删，请手动处理。" }
 }
 # 安装记录（安装脚本写在插件目录里）：没有记录的是老版本装的，当时加载项都是新加的
-$Added = '1'; $Prev = ''
+$Added = '1'; $Prev = ''; $Created = '0'
 $rec = Join-Path $Target '.academy-install'
 if (Test-Path $rec) {
   $recText = [System.IO.File]::ReadAllText($rec, $Utf8)
   if ($recText -match '(?m)^added_row=(.*?)\r?$') { if ($Matches[1]) { $Added = $Matches[1] } }
   if ($recText -match '(?m)^previous_plugin=(.*?)\r?$') { $Prev = $Matches[1] }
+  if ($recText -match '(?m)^created_patch=(.*?)\r?$') { if ($Matches[1]) { $Created = $Matches[1] } }
 }
 if ($Prev -and -not (Test-Path $Prev)) {
   Fail "安装前那里另有一个插件，它的备份 $Prev 已经不在了，卸载后没法放回去。为安全起见没有做任何改动；如确定不需要它，请先删掉 $rec 再卸载。"
@@ -60,6 +61,10 @@ if ($Added -ne '1') {
   $hasBom = ($bytes.Length -ge 3) -and ($bytes[0] -eq 0xEF) -and ($bytes[1] -eq 0xBB) -and ($bytes[2] -eq 0xBF)
   $enc = New-Object System.Text.UTF8Encoding($hasBom)
   try { [System.IO.File]::WriteAllText($Patch, $new, $enc) } catch { Fail "修改 $Patch 失败，插件文件没有删除。备份在 $Backup" }
+}
+# 配置文件是安装时新建的、现在又只剩空白：删掉，回到安装前「没有这个文件」的样子
+if (($Created -eq '1') -and (Test-Path $Patch) -and -not ([System.IO.File]::ReadAllText($Patch, $Utf8).Trim())) {
+  Remove-Item $Patch -Force
 }
 try { if (Test-Path $Target) { Remove-Item $Target -Recurse -Force } } catch { Fail "删除插件文件失败：$($_.Exception.Message)" }
 if ($Prev) {
