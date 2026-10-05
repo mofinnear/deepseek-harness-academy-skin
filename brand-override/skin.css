@@ -236,6 +236,10 @@ $SKIN [data-chat-flow-kind] { position: relative; }
 $SKIN [data-chat-flow-kind="assistant-step"],
 $SKIN [data-chat-flow-kind="turn-process"],
 $SKIN [data-chat-flow-kind="turn-tail"] { padding-left: 54px; box-sizing: border-box; }
+/* 生成过程中列表末尾有一行「正在分析请求 / 深度求索中，用时 x 秒」的运行状态行：它没有 data-chat-flow-kind，
+ * 刚开始时上面的 turn-process 几乎是空的，头像（36px）垂下来压在这一行上（用户发现）。这一行同样让出 54px。
+ * 只认类名里带 running 的无标记行：刚发出时用户自己的气泡也会短暂没有标记，不能一起推。 */
+$SKIN [data-chat-flow-kind] ~ :not([data-chat-flow-kind]):is([class*="running"], :has(> [class*="running"])) { padding-left: 54px; box-sizing: border-box; }
 $SKIN [data-chat-flow-kind="user"] { padding-right: 54px; box-sizing: border-box; }
 $SKIN [data-chat-flow-kind="user"] + :not([data-chat-flow-kind="user"])::before,
 $SKIN [data-chat-flow-kind="user"]::after {
