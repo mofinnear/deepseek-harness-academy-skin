@@ -143,9 +143,15 @@ window.__ModuleLoader__.load({
             themeService.setTheme(ACADEMY_THEME_ID);
           }
         } else if (disposeAcademyTheme) {
-          if (themeService.getTheme().preference === ACADEMY_THEME_ID) themeService.setTheme(preferenceBeforeSkin || 'system');
-          disposeAcademyTheme();
-          disposeAcademyTheme = null;
+          /* 恢复原来的主题偏好失败（例如那个主题已被卸载）时退回「跟随系统」，并且无论如何都释放皮肤主题 */
+          try {
+            if (themeService.getTheme().preference === ACADEMY_THEME_ID) themeService.setTheme(preferenceBeforeSkin || 'system');
+          } catch (restoreError) {
+            try { themeService.setTheme('system'); } catch (_) {}
+          } finally {
+            disposeAcademyTheme();
+            disposeAcademyTheme = null;
+          }
         }
         return true;
       } catch (error) {
@@ -184,7 +190,9 @@ window.__ModuleLoader__.load({
     function storedSkinStage() {
       try {
         var stage = window.localStorage.getItem(SKIN_STAGE_STORAGE_KEY);
-        return stage === 'background-only' || stage === 'focus' ? stage : 'panels';
+        /* 「只看背景」不记住：否则切回原版再切回皮肤、或重启应用后，整个界面（连切换菜单）都是隐藏的，
+         * 只能靠没写在界面上的快捷键恢复（DeepSeek 审查发现） */
+        return stage === 'focus' ? stage : 'panels';
       } catch (_) {
         return 'panels';
       }
@@ -233,6 +241,8 @@ window.__ModuleLoader__.load({
 
     window.addEventListener('keydown', function (event) {
       if (!event.altKey || !event.shiftKey || (event.code !== 'KeyB' && event.code !== 'KeyF')) return;
+      /* 按住不放时系统会连发 keydown，界面会来回闪 */
+      if (event.repeat || event.isComposing) return;
       if (!document.body?.hasAttribute('data-dsh-anime-skin')) return;
       event.preventDefault();
       var current = document.body.getAttribute('data-dsh-anime-skin-stage') || 'panels';
@@ -248,7 +258,10 @@ window.__ModuleLoader__.load({
         { source: '新会话', themed: '新建对话', attr: 'data-dsh-academy-new-chat' },
         { source: '工作区', themed: '最近对话', attr: 'data-dsh-academy-recent-heading' }
       ];
-      var candidates = document.querySelectorAll('button, [role="button"], span, div, h1, h2, h3');
+      /* 只在侧栏卡片里找：以前扫整个页面，对话正文里恰好是「工作区 / 新会话」的标题也会被改成侧栏样式；
+       * 流式输出时每 60ms 扫一遍整页也有开销（DeepSeek 审查发现）。找不到侧栏就什么都不改。 */
+      var sidebar = document.querySelector('div:has(> div > [data-slot="sidebar.workspaces"])');
+      var candidates = sidebar ? sidebar.querySelectorAll('button, [role="button"], span, div, h1, h2, h3') : [];
 
       labels.forEach(function (entry) {
         candidates.forEach(function (element) {
@@ -421,7 +434,9 @@ window.__ModuleLoader__.load({
           }, 300);
         });
       };
-      Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; })).then(reveal);
+      /* decode() 万一一直不结束，新表情就永远不显示：最多等 400ms */
+      var decoded = Promise.all(images.map(function (img) { return img.decode ? img.decode().catch(function () {}) : null; }));
+      Promise.race([decoded, new Promise(function (done) { window.setTimeout(done, 400); })]).then(reveal);
     }
 
     function selectPortrait(character, entry) {
@@ -758,8 +773,11 @@ window.__ModuleLoader__.load({
      */
     function mountSkinToggle() {
       if (!document.body) return;
-      var row = document.querySelector('div:has(> span > span > span > [data-slot="sidebar.brand.mark"])');
-      if (!row) return;
+      /* 品牌行 = 品牌图标往上第一个 div。以前写死「外面正好包三层 span」，Windows 版其中一层是 button，切换器挂不上（DeepSeek 审查发现） */
+      var mark = document.querySelector('[data-slot="sidebar.brand.mark"]');
+      var row = mark && mark.parentElement;
+      while (row && row.tagName !== 'DIV') row = row.parentElement;
+      if (!row || row === document.body) return;
       var control = document.querySelector('[data-dsh-anime-skin-toggle]');
       if (control && control.parentElement === row) return;
       if (!control) {
@@ -937,6 +955,8 @@ window.__ModuleLoader__.load({
      * @returns a style element owned by the React tree.
      */
     function LogoThemeStyle() {
+      /* 页面级样式已经在了就不再重复渲染（4 MB 的样式表不要两份）；它不在时这里兜底 */
+      if (document.querySelector('style[data-dsh-skin-page-style]')) return null;
       return jsx('style', {
         'data-dsh-logo-theme': 'true',
         dangerouslySetInnerHTML: { __html: themeCss }
@@ -957,10 +977,24 @@ window.__ModuleLoader__.load({
       };
     }
 
+    /**
+     * 皮肤样式挂在页面上（body 末尾，排在应用自己的样式之后），不再只跟着两个品牌图标槽位走：
+     * Windows 标题栏模式 + 侧栏收起 + 已有会话时这两个槽位都不渲染，皮肤样式会整份消失（DeepSeek 审查发现）。
+     * 规则都限定在 body[data-dsh-anime-skin] 上，皮肤关闭时不起作用。
+     */
+    function ensurePageStyle() {
+      if (!document.body || document.querySelector('style[data-dsh-skin-page-style]')) return;
+      var style = document.createElement('style');
+      style.setAttribute('data-dsh-skin-page-style', '');
+      style.textContent = themeCss;
+      document.body.appendChild(style);
+    }
+
     return {
       inject: ['slots', 'theme'],
       apply: function apply(ctx) {
         themeService = ctx.theme;
+        ensurePageStyle();
         setSkinEnabled(storedSkinEnabled(), false);
         /* Theme stylesheets can arrive after the plugin applies; re-read them once they have. */
         [600, 2500].forEach(function (delay) {
@@ -983,6 +1017,7 @@ window.__ModuleLoader__.load({
             /* setTimeout, not requestAnimationFrame: rAF is paused while the window is hidden. */
             window.setTimeout(function () {
               relabelQueued = false;
+              ensurePageStyle();
               mountSkinToggle();
               if (document.body.hasAttribute('data-dsh-anime-skin')) {
                 applyAcademySidebarSkin(true);
