@@ -14,12 +14,18 @@ TARGET="$PROFILE/node_modules/@local/dsh-logo"
 BACKUP="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-安装前"
 
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
+# 加载项：ID 是 local-dsh-logo 且路径是本皮肤的，才算「本皮肤的那一条」（兼容 \r\n）
+has_our_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/\@local\/dsh-logo\/index\.js[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
+has_any_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
 
 echo "== 星海书院皮肤 · 安装 =="
 [ -f "$SRC/dist/client.js" ] && [ -f "$SRC/index.js" ] && [ -f "$SRC/package.json" ] \
   || fail "找不到插件文件（$SRC）。请先把压缩包完整解压，再在解压出的文件夹里运行。"
 [ -d "$PROFILE" ] \
   || fail "没有找到 DeepSeek Harness 的配置目录（$PROFILE）。请先安装并打开一次 DeepSeek Harness 桌面版。"
+if has_any_row && ! has_our_row; then
+  fail "$PATCH 里已经有一条 id 为 local-dsh-logo、但指向别的路径的加载项，为安全起见没有做任何改动。请先手动检查那一条。"
+fi
 
 # 备份必须成功才继续：任何一步复制失败（磁盘满、没权限）都停下，不动原文件
 mkdir -p "$BACKUP" || fail "无法创建备份目录 $BACKUP"
@@ -36,7 +42,7 @@ rm -rf "$TARGET" && mkdir -p "$TARGET" \
   && cp -R "$SRC/dist" "$TARGET/" \
   || fail "复制插件文件失败。"
 
-if [ -f "$PATCH" ] && grep -qE '^[[:space:]]*- id: local-dsh-logo[[:space:]]*$' "$PATCH"; then
+if has_our_row; then
   echo "插件加载项已存在，不重复添加。"
 else
   printf '\n# Local logo override. Added by dsh-logo/tools/install.mjs; remove with --revert.\n- insert:\n    - id: local-dsh-logo\n      name: ./node_modules/@local/dsh-logo/index.js\n' >> "$PATCH" \

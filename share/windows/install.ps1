@@ -17,12 +17,19 @@ $Backup = Join-Path $BackupRoot ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-安装
 $Utf8 = New-Object System.Text.UTF8Encoding($false)
 
 function Fail($msg) { Write-Host ''; Write-Host "[错误] $msg" -ForegroundColor Red; Write-Host ''; exit 1 }
+# 加载项：ID 是 local-dsh-logo 且路径是本皮肤的，才算「本皮肤的那一条」（兼容 \r\n）
+$OurRowPattern = '(?m)^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \./node_modules/@local/dsh-logo/index\.js[ \t]*\r?$'
+$AnyRowPattern = '(?m)^[ \t]*- id: local-dsh-logo[ \t]*\r?$'
 
 Write-Host '== 星海书院皮肤 · 安装 =='
 foreach ($f in 'package.json', 'index.js', 'dist\client.js') {
   if (-not (Test-Path (Join-Path $Src $f))) { Fail "找不到插件文件（$Src）。请先把压缩包完整解压，再在解压出的文件夹里运行。" }
 }
 if (-not (Test-Path $ProfileDir)) { Fail "没有找到 DeepSeek Harness 的配置目录（$ProfileDir）。请先安装并打开一次 DeepSeek Harness 桌面版。" }
+$text = if (Test-Path $Patch) { [System.IO.File]::ReadAllText($Patch, $Utf8) } else { '' }
+if (($text -match $AnyRowPattern) -and ($text -notmatch $OurRowPattern)) {
+  Fail "$Patch 里已经有一条 id 为 local-dsh-logo、但指向别的路径的加载项，为安全起见没有做任何改动。请先手动检查那一条。"
+}
 
 try {
   New-Item -ItemType Directory -Force -Path $Backup | Out-Null
@@ -38,8 +45,7 @@ try {
   Copy-Item (Join-Path $Src 'dist') $Target -Recurse
 } catch { Fail "复制插件文件失败：$($_.Exception.Message)" }
 
-$text = if (Test-Path $Patch) { [System.IO.File]::ReadAllText($Patch, $Utf8) } else { '' }
-if ($text -match '(?m)^[ \t]*- id: local-dsh-logo[ \t]*\r?$') {
+if ($text -match $OurRowPattern) {
   Write-Host '插件加载项已存在，不重复添加。'
 } else {
   # 和 Mac 版脚本、tools/install.mjs 写的是同样的四行（换行用 \n）

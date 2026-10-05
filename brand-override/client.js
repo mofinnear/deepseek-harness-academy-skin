@@ -596,12 +596,22 @@ window.__ModuleLoader__.load({
 
     /* Called straight from the MutationObserver callback (a microtask, before the
      * next paint), so a new composer is measured before its first frame. */
+    var observedComposers = [];
+
     function observeComposerHeight() {
       if (!composerSizer) return;
+      /* Switching conversations replaces the composer; stop observing the removed
+       * ones so the observer does not keep detached DOM alive. */
+      observedComposers = observedComposers.filter(function (card) {
+        if (card.isConnected) return true;
+        composerSizer.unobserve(card);
+        return false;
+      });
       document.querySelectorAll('[data-composer-card]:not([data-dsh-sized])').forEach(function (card) {
         card.setAttribute('data-dsh-sized', '');
         writeComposerHeight(card);
         composerSizer.observe(card);
+        observedComposers.push(card);
       });
     }
 

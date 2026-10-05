@@ -9,9 +9,12 @@ TARGET="$PROFILE/node_modules/@local/dsh-logo"
 BACKUP="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%Y%m%d-%H%M%S)-卸载前"
 
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
+# 加载项：ID 是 local-dsh-logo 且路径是本皮肤的，才算「本皮肤的那一条」（兼容 \r\n）
+has_our_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/\@local\/dsh-logo\/index\.js[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
+has_any_row() { [ -f "$PATCH" ] && perl -0ne 'exit(/^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m ? 0 : 1)' "$PATCH"; }
 
 echo "== 星海书院皮肤 · 卸载 =="
-if [ ! -d "$TARGET" ] && ! { [ -f "$PATCH" ] && grep -qE '^[[:space:]]*- id: local-dsh-logo[[:space:]]*$' "$PATCH"; }; then
+if [ ! -d "$TARGET" ] && ! has_our_row; then
   echo "没有发现已安装的皮肤，不需要卸载。"
   read -r -p "按回车键关闭窗口…" _
   exit 0
@@ -32,12 +35,16 @@ if [ -d "$TARGET" ]; then
 fi
 echo "已备份当前设置到：$BACKUP"
 
-rm -rf "$TARGET" || fail "删除插件文件失败。"
+# 先改配置、确认成功再删插件：配置写不进去时插件还在，不会出现「加载项还在、插件没了」的半卸载状态
 if [ -f "$PATCH" ]; then
-  # 只去掉安装时追加的东西：前面那个换行 + 注释行（可能没有）+ - insert: / id / name 三行；文件其余部分一个字节都不动
-  perl -0pi -e 's/\n?(?:# Local logo override[^\n]*\n)?- insert:\n[ \t]+- id: local-dsh-logo\n[ \t]+name: [^\n]*(?:\n|\z)//g' "$PATCH" \
-    || fail "修改 $PATCH 失败。"
+  # 只去掉安装时追加的东西：前面那个换行 + 注释行（可能没有）+ - insert: / id / name 三行，且 name 必须是本皮肤的路径；
+  # 文件其余部分一个字节都不动（兼容 \r\n）
+  perl -0pi -e 's/\r?\n?(?:# Local logo override[^\r\n]*\r?\n)?- insert:\r?\n[ \t]+- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/\@local\/dsh-logo\/index\.js[ \t]*(?:\r?\n|\z)//g' "$PATCH" \
+    || fail "修改 $PATCH 失败，插件文件没有删除。备份在 $BACKUP"
+  # perl -i 写不进去时（如目录只读）只打印警告、退出码仍是 0，所以再确认一次那一行真的没了
+  if has_our_row; then fail "没能修改 $PATCH（可能没有写权限），插件文件没有删除。备份在 $BACKUP"; fi
 fi
+rm -rf "$TARGET" || fail "删除插件文件失败。"
 
 echo
 echo "✅ 已卸载。完全退出（Cmd+Q）DeepSeek Harness 再打开，就回到原版界面。"

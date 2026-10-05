@@ -18,8 +18,9 @@ fi
 VER="$(node -p "require('./brand-override/package.json').version")"
 NAME="星海书院皮肤-v${VER}"
 
-[ -z "$(git status --porcelain -- brand-override share tools logo.config.json assets)" ] \
-  || { echo "有未提交的改动，先提交再打包（源码包取的是 git 提交）"; exit 1; }
+# 整个仓库都不能有未提交的改动：源码包、审查包都取 git 提交（README、docs、LICENSE 也会打进去）
+[ -z "$(git status --porcelain)" ] \
+  || { echo "有未提交的改动，先提交再打包（源码包和审查包取的是 git 提交）："; git status --short; exit 1; }
 
 node tools/build.mjs >/dev/null
 node tools/verify.mjs | tail -1

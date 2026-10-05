@@ -48,14 +48,16 @@ function profileDir() {
   return join(home, 'profiles', process.env.DSH_PROFILE || 'desktop');
 }
 
-/** The exact `- id:` row this plugin adds; `local-dsh-logo-extra` and the like must not match. */
+/** Any `- id: local-dsh-logo` row (`local-dsh-logo-extra` and the like do not match). */
 const ROW_RE = /^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m;
+/** Our row: that id followed by our `name:` path. A row with the id but another path is someone else's. */
+const OUR_ROW_RE = /^[ \t]*- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/@local\/dsh-logo\/index\.js[ \t]*\r?$/m;
 /**
  * The block the installers append: the newline before it, the comment (older
- * copies may lack it) and the `- insert:` / `id` / `name` rows. Same pattern as
- * share/卸载.command and share/windows/uninstall.ps1.
+ * copies may lack it) and the `- insert:` / `id` / `name` rows, with our path
+ * only. Same pattern as share/卸载.command and share/windows/uninstall.ps1.
  */
-const BLOCK_RE = /\r?\n?(?:# Local logo override[^\r\n]*\r?\n)?- insert:\r?\n[ \t]+- id: local-dsh-logo\r?\n[ \t]+name: [^\r\n]*(?:\r?\n|$)/g;
+const BLOCK_RE = /\r?\n?(?:# Local logo override[^\r\n]*\r?\n)?- insert:\r?\n[ \t]+- id: local-dsh-logo[ \t]*\r?\n[ \t]+name: \.\/node_modules\/@local\/dsh-logo\/index\.js[ \t]*(?:\r?\n|$)/g;
 
 /**
  * Add or remove this plugin's row. Only the appended block changes; the rest of
@@ -66,7 +68,11 @@ const BLOCK_RE = /\r?\n?(?:# Local logo override[^\r\n]*\r?\n)?- insert:\r?\n[ \
  */
 function mergePatch(text, enabled) {
   if (!enabled) return text.replace(BLOCK_RE, '');
-  return ROW_RE.test(text) ? text : `${text}\n${PATCH_BLOCK}`;
+  if (OUR_ROW_RE.test(text)) return text;
+  if (ROW_RE.test(text)) {
+    throw new Error('cordis.patch.yml already has an "- id: local-dsh-logo" row pointing at another path; left untouched. Check that entry by hand.');
+  }
+  return `${text}\n${PATCH_BLOCK}`;
 }
 
 /**
@@ -117,7 +123,7 @@ function backupOriginal(patchPath, target) {
   }
   mkdirSync(BACKUP_DIR, { recursive: true });
   if (existsSync(target)) cpSync(target, join(BACKUP_DIR, 'dsh-logo'), { recursive: true });
-  cpSync(patchPath, join(BACKUP_DIR, 'cordis.patch.yml'));
+  if (existsSync(patchPath)) cpSync(patchPath, join(BACKUP_DIR, 'cordis.patch.yml'));
   writeFileSync(
     join(BACKUP_DIR, 'README.txt'),
     'Original local DSH logo plugin and profile patch, saved before the anime skin was installed.\n' +
@@ -141,7 +147,6 @@ function main() {
     return;
   }
 
-  if (!existsSync(patchPath)) throw new Error(`profile patch file not found: ${patchPath}`);
   if (mode === 'restore') {
     const originalPlugin = join(BACKUP_DIR, 'dsh-logo');
     if (!existsSync(originalPlugin)) throw new Error(`original plugin backup not found: ${originalPlugin}`);
@@ -162,20 +167,23 @@ function main() {
       throw new Error(`${target} is not this skin (package.json does not say "anime-academy skin"); left untouched. Re-run with --force to remove it anyway.`);
     }
     backupBeforeChange(patchPath, target, '卸载前');
+    /* Config first, plugin second: if the config cannot be written, nothing has been removed yet. */
+    if (existsSync(patchPath)) writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
     rmSync(target, { recursive: true, force: true });
-    writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
     console.log('\nReverted. Restart the DSH desktop app to drop the override.');
     return;
   }
 
   if (!existsSync(bundle)) throw new Error(`built bundle missing: ${bundle} — run \`node tools/build.mjs\` first`);
   backupBeforeChange(patchPath, target, '安装前');
+  /* Work out the config change first so a conflicting row stops us before any file is touched. */
+  const nextPatch = mergePatch(existsSync(patchPath) ? readFileSync(patchPath, 'utf8') : '', true);
   rmSync(target, { recursive: true, force: true });
   mkdirSync(target, { recursive: true });
   for (const entry of ['package.json', 'index.js', 'dist']) {
     cpSync(join(PLUGIN_SRC, entry), join(target, entry), { recursive: true });
   }
-  writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), true));
+  writeFileSync(patchPath, nextPatch);
   console.log('\nInstalled. Restart the DSH desktop app, then reload the Web GUI page.');
 }
 
