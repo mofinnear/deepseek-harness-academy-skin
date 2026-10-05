@@ -173,6 +173,9 @@ $SKIN div:has(> [data-slot="main"]) {
 }
 $SKIN div[data-phase]:has(> [data-conversation-content]) {
   position: relative;
+  /* 边框算进高度：Harness 刚切换会话时按可用空间排（含边框正好放下），加载完改成 height: 777px（不含边框），
+   * content-box 时 1.5px × 2 的金边让面板多出 3px，里面的输入框跟着往上顶一下（用户发现）。侧栏卡片和右侧面板本来就是 border-box。 */
+  box-sizing: border-box !important;
   overflow: visible !important;
   border: 1.5px solid var(--dsh-academy-gold);
   border-radius: 22px;
