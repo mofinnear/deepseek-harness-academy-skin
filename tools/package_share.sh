@@ -27,6 +27,7 @@ cp brand-override/package.json brand-override/index.js "$PKG/plugin/dsh-logo/"
 cp -R brand-override/dist "$PKG/plugin/dsh-logo/"
 cp share/使用说明.md share/安装.command share/卸载.command share/安装-Windows.bat share/卸载-Windows.bat "$PKG/"
 cp -R share/windows "$PKG/"
+cp LICENSE "$PKG/LICENSE.txt"   # .txt：Windows 上双击就能用记事本打开
 chmod +x "$PKG/安装.command" "$PKG/卸载.command"
 if [ -n "$PREVIEW" ]; then
   mkdir -p "$PKG/preview"

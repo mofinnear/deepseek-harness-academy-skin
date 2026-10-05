@@ -69,8 +69,22 @@ tools/package_share.sh <输出目录> [预览图目录]
 
 生成 `星海书院皮肤-v<版本>.zip`（已构建的插件 + 一键安装 / 卸载脚本 + 使用说明 + 预览图）和 `星海书院皮肤-v<版本>-源码.zip`（当前 git 提交）。预览截图要先遮掉会话标题、账号头像和昵称。
 
+## 授权与二创声明
+
+本项目全部内容（代码、样式、脚本、文档和图片素材）采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)（署名-非商业性使用-相同方式共享）授权，与所依据的原作保持一致，详见 [`LICENSE`](LICENSE)。
+
+角色形象是二次创作：
+
+| 层级 | 作者 | 说明 |
+| --- | --- | --- |
+| 原始角色「鲸鱼娘」 | 上善无形 | CC BY-NC-SA 4.0（2026-08-02 公开声明） |
+| 「DeepSeek 元素 + 女仆鲸鱼娘」二次设计 | ZipZipPipe | 基于上善无形的鲸鱼娘二创，CC BY-NC-SA 4.0 |
+| 本皮肤「星海书院」 | mofinnear | 以上述形象为参考，用 AI 重新绘制立绘、表情、书桌场景、背景和界面装饰并加工，做成 DeepSeek Harness 皮肤 |
+
+欢迎分享、修改和继续二创，但请：署名（注明以上三层作者、附协议链接、说明你的修改），不用于商业目的，衍生作品继续采用 CC BY-NC-SA 4.0。
+
 ## 说明
 
-- 图片素材由 AI 生成后加工，仅供个人使用和交流，请勿商用。
+
 - 皮肤基于 2026 年 9–10 月的 DeepSeek Harness 桌面版制作；应用改版后页面结构变化，部分样式可能需要调整选择器（用 `data-slot`、`data-*`、`role` 等属性，不用会变的哈希类名）。
 - 替换 Dock / 访达里的应用图标（`tools/install_app_icon.py`、`tools/swap-app-icon.command`）和皮肤安装无关：它会改写 `/Applications/DeepSeek Harness.app` 并重新签名，普通使用者不需要运行。
