@@ -11,15 +11,25 @@ BACKUP="${DSH_SKIN_BACKUP_DIR:-$DSH_HOME_DIR/academy-skin-backup}/$(date +%Y%m%d
 fail() { echo; echo "❌ $1"; echo; read -r -p "按回车键关闭窗口…" _; exit 1; }
 
 echo "== 星海书院皮肤 · 卸载 =="
-if [ ! -d "$TARGET" ] && ! { [ -f "$PATCH" ] && grep -q "id: local-dsh-logo" "$PATCH"; }; then
+if [ ! -d "$TARGET" ] && ! { [ -f "$PATCH" ] && grep -qE '^[[:space:]]*- id: local-dsh-logo[[:space:]]*$' "$PATCH"; }; then
   echo "没有发现已安装的皮肤，不需要卸载。"
   read -r -p "按回车键关闭窗口…" _
   exit 0
 fi
 
+# 备份必须成功才继续：任何一步复制失败（磁盘满、没权限）都停下，不动原文件
+# 同一个路径 @local/dsh-logo 以前也被别的本地 logo 插件用过：不是本皮肤就不删
+if [ -d "$TARGET" ] && ! grep -q "anime-academy skin" "$TARGET/package.json" 2>/dev/null; then
+  fail "$TARGET 不是星海书院皮肤（package.json 里没有 anime-academy skin），为安全起见没有删除。如确定要删，请手动处理。"
+fi
+
 mkdir -p "$BACKUP" || fail "无法创建备份目录 $BACKUP"
-[ -f "$PATCH" ] && cp "$PATCH" "$BACKUP/cordis.patch.yml"
-[ -d "$TARGET" ] && cp -R "$TARGET" "$BACKUP/dsh-logo"
+if [ -f "$PATCH" ]; then
+  cp "$PATCH" "$BACKUP/cordis.patch.yml" && [ -f "$BACKUP/cordis.patch.yml" ] || fail "备份 cordis.patch.yml 失败，没有做任何改动。"
+fi
+if [ -d "$TARGET" ]; then
+  cp -R "$TARGET" "$BACKUP/dsh-logo" && [ -d "$BACKUP/dsh-logo" ] || fail "备份原插件目录失败，没有做任何改动。"
+fi
 echo "已备份当前设置到：$BACKUP"
 
 rm -rf "$TARGET" || fail "删除插件文件失败。"

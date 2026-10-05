@@ -15,7 +15,7 @@
  *   node tools/install.mjs            # dry run
  *   node tools/install.mjs --apply
  *   node tools/install.mjs --restore-original
- *   node tools/install.mjs --revert
+ *   node tools/install.mjs --revert          # only removes the plugin if it is this skin (--force to override)
  */
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,7 +29,6 @@ const PLUGIN_SRC = join(ROOT, 'brand-override');
 const BACKUP_DIR = join(ROOT, 'backup', 'ui-skin-original-20260930');
 const ROW_ID = 'local-dsh-logo';
 const PACKAGE_SPEC = './node_modules/@local/dsh-logo/index.js';
-const ROW_MARK = `id: ${ROW_ID}`;
 const PATCH_BLOCK = [
   '# Local logo override. Added by dsh-logo/tools/install.mjs; remove with --revert.',
   '- insert:',
@@ -49,28 +48,65 @@ function profileDir() {
   return join(home, 'profiles', process.env.DSH_PROFILE || 'desktop');
 }
 
+/** The exact `- id:` row this plugin adds; `local-dsh-logo-extra` and the like must not match. */
+const ROW_RE = /^[ \t]*- id: local-dsh-logo[ \t]*\r?$/m;
 /**
- * Merge the insert row into a patch file, replacing any previous copy of it.
+ * The block the installers append: the newline before it, the comment (older
+ * copies may lack it) and the `- insert:` / `id` / `name` rows. Same pattern as
+ * share/卸载.command and share/windows/uninstall.ps1.
+ */
+const BLOCK_RE = /\r?\n?(?:# Local logo override[^\r\n]*\r?\n)?- insert:\r?\n[ \t]+- id: local-dsh-logo\r?\n[ \t]+name: [^\r\n]*(?:\r?\n|$)/g;
+
+/**
+ * Add or remove this plugin's row. Only the appended block changes; the rest of
+ * the user's file (blank lines, trailing newline, CRLF) is left byte for byte.
  * @param text - current patch file text.
  * @param enabled - true to add the row, false to strip it.
  * @returns the next patch file text.
  */
 function mergePatch(text, enabled) {
-  const lines = text.split('\n');
-  const out = [];
-  for (let i = 0; i < lines.length; i += 1) {
-    if (!lines[i].includes(ROW_MARK)) {
-      out.push(lines[i]);
-      continue;
-    }
-    /* Drop the row and its `- insert:` owner line, plus any preceding comment. */
-    if (out.length && out[out.length - 1].trim() === '- insert:') out.pop();
-    if (out.length && out[out.length - 1].startsWith('# Local logo override')) out.pop();
-    i += 1; /* skip the `name:` line */
+  if (!enabled) return text.replace(BLOCK_RE, '');
+  return ROW_RE.test(text) ? text : `${text}\n${PATCH_BLOCK}`;
+}
+
+/**
+ * Whether the installed plugin directory is this skin. The same path
+ * `@local/dsh-logo` was used before by a plain logo plugin (its description says
+ * "brand override", ours "anime-academy skin"), so never delete it blindly.
+ * @param target - installed plugin directory.
+ * @returns true when absent or ours.
+ */
+function isOurPlugin(target) {
+  if (!existsSync(target)) return true;
+  try {
+    const pkg = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8'));
+    return pkg.name === '@local/dsh-logo' && /anime-academy skin/.test(pkg.description ?? '');
+  } catch {
+    return false;
   }
-  let next = out.join('\n').replace(/\n{3,}/g, '\n\n');
-  if (enabled) next = `${next.replace(/\s*$/, '')}\n\n${PATCH_BLOCK}`;
-  return next.replace(/\s*$/, '') + '\n';
+}
+
+/**
+ * Copy the patch file and the installed plugin aside before changing either,
+ * the same place the one-click scripts use. Throws if the copy fails.
+ * @param patchPath - profile patch file.
+ * @param target - installed plugin directory.
+ * @param label - suffix such as 安装前 / 卸载前.
+ * @returns the backup directory.
+ */
+function backupBeforeChange(patchPath, target, label) {
+  const home = process.env.DSH_HOME || join(homedir(), '.dsh');
+  const d = new Date();
+  const two = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}`;   /* 本地时间，和安装脚本一致 */
+  const dir = join(process.env.DSH_SKIN_BACKUP_DIR || join(home, 'academy-skin-backup'), `${stamp}-${label}`);
+  mkdirSync(dir, { recursive: true });
+  if (existsSync(patchPath)) cpSync(patchPath, join(dir, 'cordis.patch.yml'));
+  if (existsSync(target)) cpSync(target, join(dir, 'dsh-logo'), { recursive: true });
+  if (existsSync(patchPath) && !existsSync(join(dir, 'cordis.patch.yml'))) throw new Error(`backup failed: ${dir}`);
+  if (existsSync(target) && !existsSync(join(dir, 'dsh-logo', 'package.json'))) throw new Error(`backup failed: ${dir}`);
+  console.log(`[backup] ${dir}`);
+  return dir;
 }
 
 /** Save the current working plugin and profile patch once before skin changes. */
@@ -121,15 +157,19 @@ function main() {
     const result = spawnSync(process.execPath, [join(ROOT, 'tools', 'build.mjs')], { stdio: 'inherit' });
     if (result.status !== 0) throw new Error(`bundle build failed (exit ${result.status ?? 'unknown'})`);
   }
-  if (!existsSync(bundle)) throw new Error(`built bundle missing: ${bundle} — run \`node tools/build.mjs\` first`);
-
   if (mode === 'revert') {
+    if (!isOurPlugin(target) && !argv.includes('--force')) {
+      throw new Error(`${target} is not this skin (package.json does not say "anime-academy skin"); left untouched. Re-run with --force to remove it anyway.`);
+    }
+    backupBeforeChange(patchPath, target, '卸载前');
     rmSync(target, { recursive: true, force: true });
     writeFileSync(patchPath, mergePatch(readFileSync(patchPath, 'utf8'), false));
     console.log('\nReverted. Restart the DSH desktop app to drop the override.');
     return;
   }
 
+  if (!existsSync(bundle)) throw new Error(`built bundle missing: ${bundle} — run \`node tools/build.mjs\` first`);
+  backupBeforeChange(patchPath, target, '安装前');
   rmSync(target, { recursive: true, force: true });
   mkdirSync(target, { recursive: true });
   for (const entry of ['package.json', 'index.js', 'dist']) {
@@ -139,4 +179,9 @@ function main() {
   console.log('\nInstalled. Restart the DSH desktop app, then reload the Web GUI page.');
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error(`\n[install] ${error.message}`);
+  process.exitCode = 1;
+}

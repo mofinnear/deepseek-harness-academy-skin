@@ -14,11 +14,17 @@ function Fail($msg) { Write-Host ''; Write-Host "[错误] $msg" -ForegroundColor
 
 Write-Host '== 星海书院皮肤 · 卸载 =='
 $text = if (Test-Path $Patch) { [System.IO.File]::ReadAllText($Patch, $Utf8) } else { '' }
-if (-not (Test-Path $Target) -and ($text -notmatch 'id: local-dsh-logo')) {
+if (-not (Test-Path $Target) -and ($text -notmatch '(?m)^[ \t]*- id: local-dsh-logo[ \t]*\r?$')) {
   Write-Host '没有发现已安装的皮肤，不需要卸载。'
   exit 0
 }
 
+# 同一个路径 @local/dsh-logo 以前也被别的本地 logo 插件用过：不是本皮肤就不删
+if (Test-Path $Target) {
+  $pkgJson = Join-Path $Target 'package.json'
+  $isOurs = (Test-Path $pkgJson) -and ([System.IO.File]::ReadAllText($pkgJson, $Utf8) -match 'anime-academy skin')
+  if (-not $isOurs) { Fail "$Target 不是星海书院皮肤（package.json 里没有 anime-academy skin），为安全起见没有删除。如确定要删，请手动处理。" }
+}
 try {
   New-Item -ItemType Directory -Force -Path $Backup | Out-Null
   if (Test-Path $Patch) { Copy-Item $Patch (Join-Path $Backup 'cordis.patch.yml') }

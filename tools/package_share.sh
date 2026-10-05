@@ -10,6 +10,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${1:?用法：tools/package_share.sh <输出目录> [预览图目录]}"
 PREVIEW="${2:-}"
 cd "$ROOT"
+# 两个 zip 都靠 git：必须在本项目自己的仓库里运行（分享出去的源码副本不是仓库，或被上层仓库的 .gitignore 忽略，会打出不完整的包）
+TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "$TOP" != "$ROOT" ] || [ -z "$(git ls-files brand-override/client.js)" ]; then
+  echo "请在皮肤项目自己的 git 仓库里运行（当前目录不是，或它的文件没有被 git 跟踪）：$ROOT"; exit 1
+fi
 VER="$(node -p "require('./brand-override/package.json').version")"
 NAME="星海书院皮肤-v${VER}"
 
@@ -54,7 +59,9 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
 PY
 git archive --format=zip --prefix="$NAME-源码/" -o "$OUT/$NAME-源码.zip" HEAD
 # 代码审查包：只有代码和说明（不含图片、不含构建产物），给 DeepSeek / GPT 等审查用；审查要求见 docs/代码审查说明.md
-git archive --format=zip --prefix="$NAME-代码审查/" -o "$OUT/$NAME-代码审查.zip" HEAD -- \
+REVIEW_NOTE="$(mktemp -d)/审查包说明.txt"
+printf '这是「星海书院」皮肤的代码审查包：只有代码和说明，不含图片素材和构建产物，仅供审阅，不能用来安装（README 里的预览图和安装命令在这里无效）。\r\n审查要求和输出格式见 docs/代码审查说明.md。安装请用 %s.zip 或 GitHub Releases。\r\n' "$NAME" > "$REVIEW_NOTE"
+git archive --format=zip --prefix="$NAME-代码审查/" --add-file="$REVIEW_NOTE" -o "$OUT/$NAME-代码审查.zip" HEAD -- \
   docs/代码审查说明.md README.md LICENSE docs/交接说明.md logo.config.json \
   brand-override/client.js brand-override/index.js brand-override/package.json brand-override/cordis.patch.yml \
   brand-override/skin.css brand-override/skin-art.css share \

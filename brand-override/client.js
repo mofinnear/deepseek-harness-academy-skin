@@ -264,10 +264,11 @@ window.__ModuleLoader__.load({
           if (element.children.length === 0) {
             if (current !== replacement) element.textContent = replacement;
           } else {
+            /* Match either wording: turning the skin off must find the themed text it put there. */
             Array.from(element.childNodes).forEach(function (node) {
-              if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() === entry.source) {
-                node.nodeValue = replacement;
-              }
+              if (node.nodeType !== Node.TEXT_NODE) return;
+              var text = node.nodeValue.trim();
+              if (text === entry.source || text === entry.themed) node.nodeValue = replacement;
             });
           }
 

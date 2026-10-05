@@ -21,9 +21,14 @@ echo "== 星海书院皮肤 · 安装 =="
 [ -d "$PROFILE" ] \
   || fail "没有找到 DeepSeek Harness 的配置目录（$PROFILE）。请先安装并打开一次 DeepSeek Harness 桌面版。"
 
+# 备份必须成功才继续：任何一步复制失败（磁盘满、没权限）都停下，不动原文件
 mkdir -p "$BACKUP" || fail "无法创建备份目录 $BACKUP"
-[ -f "$PATCH" ] && cp "$PATCH" "$BACKUP/cordis.patch.yml"
-[ -d "$TARGET" ] && cp -R "$TARGET" "$BACKUP/dsh-logo"
+if [ -f "$PATCH" ]; then
+  cp "$PATCH" "$BACKUP/cordis.patch.yml" && [ -f "$BACKUP/cordis.patch.yml" ] || fail "备份 cordis.patch.yml 失败，没有做任何改动。"
+fi
+if [ -d "$TARGET" ]; then
+  cp -R "$TARGET" "$BACKUP/dsh-logo" && [ -d "$BACKUP/dsh-logo" ] || fail "备份原插件目录失败，没有做任何改动。"
+fi
 echo "已备份原来的设置到：$BACKUP"
 
 rm -rf "$TARGET" && mkdir -p "$TARGET" \
@@ -31,7 +36,7 @@ rm -rf "$TARGET" && mkdir -p "$TARGET" \
   && cp -R "$SRC/dist" "$TARGET/" \
   || fail "复制插件文件失败。"
 
-if [ -f "$PATCH" ] && grep -q "id: local-dsh-logo" "$PATCH"; then
+if [ -f "$PATCH" ] && grep -qE '^[[:space:]]*- id: local-dsh-logo[[:space:]]*$' "$PATCH"; then
   echo "插件加载项已存在，不重复添加。"
 else
   printf '\n# Local logo override. Added by dsh-logo/tools/install.mjs; remove with --revert.\n- insert:\n    - id: local-dsh-logo\n      name: ./node_modules/@local/dsh-logo/index.js\n' >> "$PATCH" \

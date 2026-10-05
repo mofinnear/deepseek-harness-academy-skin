@@ -39,7 +39,7 @@ try {
 } catch { Fail "复制插件文件失败：$($_.Exception.Message)" }
 
 $text = if (Test-Path $Patch) { [System.IO.File]::ReadAllText($Patch, $Utf8) } else { '' }
-if ($text -match 'id: local-dsh-logo') {
+if ($text -match '(?m)^[ \t]*- id: local-dsh-logo[ \t]*\r?$') {
   Write-Host '插件加载项已存在，不重复添加。'
 } else {
   # 和 Mac 版脚本、tools/install.mjs 写的是同样的四行（换行用 \n）
