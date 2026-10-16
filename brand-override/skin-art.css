@@ -39,6 +39,23 @@ $SKIN div[data-phase]:has(> [data-conversation-content])::after {
   filter: drop-shadow(0 0 3px #fff3c866);
   border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px stretch;
 }
+/* 插件页：同一套金框和白底，画在对话列上（理由见 skin.css 插件页那段） */
+$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+  inset: 19px calc(var(--dsh-rail-w) + 11px) 19px 19px;
+  border-color: transparent;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7ff 88%);
+  box-shadow: 0 18px 40px #0b1d3d40;
+}
+$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: -13px calc(var(--dsh-rail-w) - 13px) -13px -5px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px #fff3c866);
+  border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px stretch;
+}
 /* 四角花饰向内伸约 46px：顶栏左右让出位置，避免压住标题和右侧按钮 */
 $SKIN div[data-phase]:has(> [data-conversation-content]) header { padding-right: 46px !important; padding-left: 46px !important; }
 $SKIN [data-sidebar-right-panel="push"][data-sidebar-right-open="true"] {
@@ -74,6 +91,12 @@ $SKIN div[data-phase]:has(> [data-conversation-content])::before {
 /* 右侧面板同理：面板自身和内容区（tabHost）的底色都去掉，白底改画在面板列的 ::before 上，
  * 位置与列上的金框 ::after 完全一致，再用同一张遮罩裁切。列设 isolation 才能让 z-index: -1
  * 的白底留在列里、垫在面板下面，而不是沉到全景背景后面。 */
+$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+  inset: -13px calc(var(--dsh-rail-w) - 13px) -13px -5px;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-mask-box-image: var(--dsh-academy-panel-fill-mask-src) 215 175 / 97px 79px stretch;
+}
 $SKIN [data-rightbar-col] { isolation: isolate; }
 $SKIN [data-sidebar-right-panel][data-sidebar-right-open="true"],
 $SKIN [data-sidebar-right-panel][data-sidebar-right-open="true"] [class*="tabHost"],

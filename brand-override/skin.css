@@ -135,7 +135,7 @@ $SKIN [data-dsh-academy-new-chat] {
   box-shadow: inset 0 1px 0 #ffffff45, 0 4px 12px #071d414d !important;
 }
 $SKIN [data-dsh-academy-recent-heading] { color: #f7f9ff !important; font-weight: 700 !important; }
-$SKIN [data-dsh-academy-plugin-link] { display: none !important; }
+/* 「插件」入口：v1.0 按效果图藏起来了；Harness 新版有插件页，要能从侧栏进去（用户要求），改为显示 */
 
 /* 会话列表：工作区文件夹行 + 会话。
  * 以前按效果图把工作区分组行藏起来了（当时只有一个工作区）；有多个工作区时就看不出会话属于哪个文件夹，
@@ -197,6 +197,21 @@ $SKIN div[data-phase]:has(> [data-conversation-content]) {
   border: 1.5px solid var(--dsh-academy-gold);
   border-radius: 22px;
   background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7fff0 100%) !important;
+  box-shadow: 0 0 0 4px #ffffff8c, 0 18px 40px #0b1d3d40;
+}
+/* 插件页（section[data-plugin-panel]，Harness 新版）直接放在对话列里，不经过对话面板，原来没有白底金边，
+ * 文字压在背景图上（用户发现）。插件页自己是滚动容器，金框画在它身上会被裁掉、跟着滚动，所以画在对话列上：
+ * 对话列有 padding（上下左 14px、右边让出陪伴栏），::before/::after 用同样的内缩对齐插件页。 */
+$SKIN div:has(> [data-slot="main"] > [data-plugin-panel]) { isolation: isolate; }
+$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 14px calc(var(--dsh-rail-w) + 6px) 14px 14px;
+  border: 1.5px solid var(--dsh-academy-gold);
+  border-radius: 22px;
+  pointer-events: none;
+  background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7fff0 100%);
   box-shadow: 0 0 0 4px #ffffff8c, 0 18px 40px #0b1d3d40;
 }
 $SKIN [data-conversation-content] {
