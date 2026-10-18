@@ -128,6 +128,8 @@ if (skinAssetsMatch) {
   record('every expression has a label', Array.isArray(assets.expressions) && assets.expressions.every((entry) => typeof entry.label === 'string' && entry.label));
 }
 
+/* 复制全文：列表型扩展位用自己的 id（不顶替「在 VS Code 中打开」），并且放在等文件读取服务的子插件里。 */
+record('file preview copy button registers its own id behind the file reader', source.includes("id: 'dsh-academy-copy-text'") && source.includes("ctx.inject(['slots', 'remote', 'remote.workspaceFiles']"));
 const registered = [...source.matchAll(/priority: SHADOW_PRIORITY/g)].length;
 record('all three slots register through the shadow priority', registered === 3, `found ${registered}`);
 

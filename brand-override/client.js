@@ -978,6 +978,145 @@ window.__ModuleLoader__.load({
       };
     }
 
+    /* ---------- 右侧文件预览：复制全文 ---------- */
+    /* 不属于外观，原版和皮肤下都有。按钮挂在 Harness 留给文件预览工具栏的扩展位
+     * sidebar.right.tab.document.actions（「在 VS Code 中打开」也在这里），复制的是文件原文：
+     * Markdown 渲染后看到的是排版，复制出来的是源码。 */
+    var React = require('react');
+    var uiPrimitives = null;
+    try {
+      uiPrimitives = require('@deepseek-ai/dsh-client-ui-primitives');
+    } catch (error) {
+      uiPrimitives = null;
+    }
+    var COPY_RESET_MS = 1600;
+    /* 这些文件复制不出文字，不放按钮 */
+    var COPY_BINARY_PATH = /\.(pdf|png|jpe?g|gif|webp|bmp|ico|icns|heic|tiff?|psd|xlsx?|xlsm|docx?|pptx?|key|numbers|pages|zip|gz|tgz|bz2|xz|7z|rar|dmg|pkg|exe|dll|so|dylib|bin|mp3|m4a|wav|flac|mp4|mov|avi|mkv|woff2?|ttf|otf)$/i;
+    var COPY_LABELS = { idle: '复制全文', copied: '已复制全文', failed: '复制失败' };
+
+    /** 后备图标：公共组件库里没有图标时用 */
+    function CopyGlyph(props) {
+      var paths = props.state === 'copied'
+        ? [jsx('path', { d: 'M4 10.5l3.5 3.5L16 5.5' }, 'c')]
+        : props.state === 'failed'
+          ? [jsx('path', { d: 'M5.5 5.5l9 9M14.5 5.5l-9 9' }, 'x')]
+          : [jsx('rect', { x: 7, y: 7, width: 9, height: 9, rx: 2 }, 'r'), jsx('path', { d: 'M13 4.5H6A1.5 1.5 0 0 0 4.5 6v7' }, 'p')];
+      return jsx('svg', {
+        viewBox: '0 0 20 20', width: 16, height: 16, fill: 'none', stroke: 'currentColor',
+        strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true,
+        children: paths
+      });
+    }
+
+    function copyIcon(state) {
+      var name = state === 'copied' ? 'IconCheckOutlineRegular' : state === 'failed' ? 'IconCloseOutlineRegular' : 'IconCopyOutlineRegular';
+      var Icon = uiPrimitives && uiPrimitives[name];
+      return Icon ? jsx(Icon, {}) : jsx(CopyGlyph, { state: state });
+    }
+
+    /** 写剪贴板：优先用 Harness 自己的写法，没有就用浏览器接口，再不行退回 execCommand。 */
+    function writeTextToClipboard(text) {
+      if (uiPrimitives && typeof uiPrimitives.writeClipboard === 'function') {
+        return Promise.resolve(uiPrimitives.writeClipboard(text));
+      }
+      var viaApi = navigator.clipboard && navigator.clipboard.writeText
+        ? navigator.clipboard.writeText(text).then(function () { return true; })
+        : Promise.reject(new Error('no clipboard api'));
+      return viaApi.catch(function () {
+        var area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(area);
+        area.select();
+        var ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } finally {
+          area.remove();
+        }
+        return ok;
+      });
+    }
+
+    /** 整个文件按 UTF-8 读出来；不是合法 UTF-8（二进制）就当失败。 */
+    function readWholeText(files, sessionId, path) {
+      return files.readBytes(sessionId, path, {}, new AbortController().signal).then(function (result) {
+        if (!result || !result.ok) throw (result && result.error) || new Error('read failed');
+        return new TextDecoder('utf-8', { fatal: true }).decode(result.value.data);
+      });
+    }
+
+    /**
+     * @param files - remote.workspaceFiles（只在它可用时才注册这个按钮）
+     * @returns 工具栏按钮组件；props 是扩展位给的 { absolutePath, sessionId, ... }
+     */
+    function createCopyWholeFileAction(files) {
+      return function CopyWholeFileAction(props) {
+        var absolutePath = props.absolutePath;
+        var sessionId = props.sessionId;
+        var stateHook = React.useState('idle');
+        var state = stateHook[0];
+        var setState = stateHook[1];
+        var classHook = React.useState('');
+        var toolClass = classHook[0];
+        var setToolClass = classHook[1];
+        var buttonRef = React.useRef(null);
+        var busyRef = React.useRef(false);
+        var timerRef = React.useRef(0);
+
+        /* 预览自己的工具按钮类名是打包时生成的，照抄旁边「刷新」按钮的，样式就一致 */
+        React.useLayoutEffect(function () {
+          var node = buttonRef.current;
+          for (var depth = 0; node && depth < 5; depth += 1) {
+            node = node.parentElement;
+            var reload = node && node.querySelector('[data-textpreview-tool="reload"]');
+            if (reload) {
+              if (reload.className !== toolClass) setToolClass(reload.className);
+              return;
+            }
+          }
+        });
+        React.useEffect(function () {
+          return function () { window.clearTimeout(timerRef.current); };
+        }, []);
+
+        if (!absolutePath || !sessionId || COPY_BINARY_PATH.test(absolutePath)) return null;
+
+        function settle(next) {
+          busyRef.current = false;
+          setState(next);
+          window.clearTimeout(timerRef.current);
+          timerRef.current = window.setTimeout(function () { setState('idle'); }, COPY_RESET_MS);
+        }
+
+        function onCopy() {
+          if (busyRef.current) return;
+          busyRef.current = true;
+          readWholeText(files, sessionId, absolutePath)
+            .then(writeTextToClipboard)
+            .then(function (ok) { settle(ok === false ? 'failed' : 'copied'); }, function (error) {
+              console.warn('[local-dsh-logo] 复制全文失败', error);
+              settle('failed');
+            });
+        }
+
+        var button = jsx('button', {
+          ref: buttonRef,
+          type: 'button',
+          className: toolClass || undefined,
+          'aria-label': COPY_LABELS[state],
+          title: uiPrimitives && uiPrimitives.Tooltip ? undefined : COPY_LABELS[state],
+          'data-dsh-academy-copy-text': state,
+          onClick: onCopy,
+          children: copyIcon(state)
+        });
+        return uiPrimitives && uiPrimitives.Tooltip
+          ? jsx(uiPrimitives.Tooltip, { label: COPY_LABELS[state], side: 'bottom', delayMs: 500, children: button })
+          : button;
+      };
+    }
+
     /**
      * 皮肤样式挂在页面上（body 末尾，排在应用自己的样式之后），不再只跟着两个品牌图标槽位走：
      * Windows 标题栏模式 + 侧栏收起 + 已有会话时这两个槽位都不渲染，皮肤样式会整份消失（DeepSeek 审查发现）。
@@ -1044,6 +1183,19 @@ window.__ModuleLoader__.load({
             yield ctx.slots.register(
               { name: 'sidebar.brand.name', priority: SHADOW_PRIORITY },
               SidebarName
+            );
+          });
+        });
+
+        /* 复制全文按钮单独放在一个子插件里：要等文件读取服务（remote.workspaceFiles）就绪才运行，
+         * 万一新版 Harness 没有这个服务，也只是没有按钮，不会拖住整个皮肤。 */
+        ctx.inject(['slots', 'remote', 'remote.workspaceFiles'], function applyCopyWholeFile(sub) {
+          var files = sub.remote && sub.remote.workspaceFiles;
+          if (!files || typeof files.readBytes !== 'function') return;
+          sub.slots.inject('sidebar.right.tab.document.actions', function registerCopyWholeFile() {
+            return sub.slots.register(
+              { name: 'sidebar.right.tab.document.actions', id: 'dsh-academy-copy-text', order: -10 },
+              createCopyWholeFileAction(files)
             );
           });
         });
