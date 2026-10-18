@@ -202,8 +202,11 @@ $SKIN div[data-phase]:has(> [data-conversation-content]) {
 /* 插件页（section[data-plugin-panel]，Harness 新版）直接放在对话列里，不经过对话面板，原来没有白底金边，
  * 文字压在背景图上（用户发现）。插件页自己是滚动容器，金框画在它身上会被裁掉、跟着滚动，所以画在对话列上：
  * 对话列有 padding（上下左 14px、右边让出陪伴栏），::before/::after 用同样的内缩对齐插件页。 */
-$SKIN div:has(> [data-slot="main"] > [data-plugin-panel]) { isolation: isolate; }
-$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+/* 自动化任务页（section[data-testid="task-manager-page"]，Harness 新版）和插件页一样放在对话列里，同样处理；
+ * 它自带一层半透明底色（--dsw-alias-bg-base），去掉，改用对话列上的白底。 */
+$SKIN div:has(> [data-slot="main"] > :is([data-plugin-panel], [data-testid="task-manager-page"])) { isolation: isolate; }
+$SKIN [data-slot="main"] > [data-testid="task-manager-page"] { background: transparent !important; }
+$SKIN div:has(> [data-slot="main"] > :is([data-plugin-panel], [data-testid="task-manager-page"]))::before {
   content: "";
   position: absolute;
   z-index: -1;

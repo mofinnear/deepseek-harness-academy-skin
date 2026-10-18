@@ -8,7 +8,7 @@
  * 九宫格边框的 slice 数值是原图像素（构建时禁止缩小这三张图）：
  *   panel-frame.png    1024×1024  边框外线：左右 x≈42，上下 y≈60；可拉伸段 x 169–856 / y 209–832
  *   sidebar-frame.png   600×1500  边框线：左右 x≈42，上下 y≈56；可拉伸段 x 104–492 / y 116–1377
- *   composer-frame.png 1600×190   胶囊上下线 y≈14 / 172；两端半圆 + 星，可拉伸段 x 154–1445
+ *   composer-frame-v3.png 2172×354  胶囊上下线 y≈39 / 313；两端半圆，可拉伸段 x 420–1752（详见 composerFrame 一段）
  * 显示比例统一取 0.45：border-image-width = slice × 0.45，外扩 inset = 线位置 × 0.45，
  * 这样金线正好压在面板边缘上。
  */
@@ -40,14 +40,14 @@ $SKIN div[data-phase]:has(> [data-conversation-content])::after {
   border-image: var(--dsh-academy-panel-frame-src) 215 175 / 97px 79px stretch;
 }
 /* 插件页：同一套金框和白底，画在对话列上（理由见 skin.css 插件页那段） */
-$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+$SKIN div:has(> [data-slot="main"] > :is([data-plugin-panel], [data-testid="task-manager-page"]))::before {
   inset: 19px calc(var(--dsh-rail-w) + 11px) 19px 19px;
   border-color: transparent;
   border-radius: 16px;
   background: linear-gradient(180deg, #fbfdfff4 0%, #f2f7ff 88%);
   box-shadow: 0 18px 40px #0b1d3d40;
 }
-$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::after {
+$SKIN div:has(> [data-slot="main"] > :is([data-plugin-panel], [data-testid="task-manager-page"]))::after {
   content: "";
   position: absolute;
   z-index: 2;
@@ -91,7 +91,7 @@ $SKIN div[data-phase]:has(> [data-conversation-content])::before {
 /* 右侧面板同理：面板自身和内容区（tabHost）的底色都去掉，白底改画在面板列的 ::before 上，
  * 位置与列上的金框 ::after 完全一致，再用同一张遮罩裁切。列设 isolation 才能让 z-index: -1
  * 的白底留在列里、垫在面板下面，而不是沉到全景背景后面。 */
-$SKIN div:has(> [data-slot="main"] > [data-plugin-panel])::before {
+$SKIN div:has(> [data-slot="main"] > :is([data-plugin-panel], [data-testid="task-manager-page"]))::before {
   inset: -13px calc(var(--dsh-rail-w) - 13px) -13px -5px;
   border-radius: 0;
   box-shadow: none;
@@ -134,36 +134,50 @@ $SKIN div:has(> div > [data-slot="sidebar.workspaces"])::after {
 /* @end */
 
 /* @art composerFrame */
-/* 胶囊边框 composer-frame-v2.png（2172×354，GPT 第二版，单道细金线，已裁掉上下光晕区）：
+/* 胶囊边框 composer-frame-v3.png（2172×354）：由 composer-frame-v2.png（GPT 第二版，单道细金线）经 tools/composer_stars.py
+ * 去掉两端大星、补齐弧线得到，两端大星另存为 composer-star-left/right.png（170×160，竖直中心 = 原图 y=177）。
  *   上下金线中心在 y=39 / 313（间距 274），两端半圆半径 137，弧线最外点中心在 x≈69；
- *   两端装饰在 x<420 以内，中间是均匀直线。
- * 金线间距 274 对应输入框高度 H，整张图按 k = H/274 缩放：
- *   上外扩 39k ≈ 14.2% H，下外扩 41k ≈ 15.0% H，左右外扩 69k ≈ 0.252H，两端切片宽 420k ≈ 1.533H。
- * 半圆半径 137k 正好是 H/2，与 border-radius: 999px 的胶囊重合。
+ *   两端装饰在 x<420 以内，中间是均匀直线；y=176 这一行正好是两端弧线的竖直切点。
+ * 金线间距 274 对应缩放基准 S，整张图按 k = S/274 缩放：
+ *   上外扩 39k ≈ 14.2% S，下外扩 41k ≈ 15.0% S，左右外扩 69k ≈ 0.252S，两端切片宽 420k ≈ 1.533S，
+ *   上下切片 176k / 177k ≈ 0.6423S / 0.646S，大星 170k × 160k ≈ 0.6204S × 0.5839S。
+ * S 取输入框高度 H，但不超过 132px（单行时对话页约 115px、新会话首页约 130px，这两种外观不变）：
+ *   H ≤ 132px 时半圆半径 137k 正好是 H/2，与胶囊重合；
+ *   输入框被多行内容撑高时，花饰保持 132px 时的大小，y=176 那一行拉成左右两条竖直金线，大星固定在左右两侧的竖直中心，
+ *   圆角半径停在 S/2，不再按 H 放大（放大后两端花饰有输入框那么高，会盖住上方的工具栏）。
  * H 由 client.js 写到 --dsh-composer-h 上：新输入框一出现就量（MutationObserver 回调里，不等防抖），之后 ResizeObserver 跟踪；
  * 还没量到时用上一个输入框的高度 --dsh-composer-last-h，再没有才按 98px。 */
 $SKIN [data-composer-card] {
   --dsh-ch: var(--dsh-composer-h, var(--dsh-composer-last-h, 98px)); /* 还没量到时先用上一个输入框的高度（切换会话时输入框会被换掉） */
+  --dsh-cs: min(var(--dsh-ch), 132px); /* 缩放基准 S */
   isolation: isolate;
   border-color: transparent !important;
-  border-radius: 999px !important;
+  border-radius: calc(var(--dsh-cs) / 2) !important;
   padding-right: 34px !important;
   padding-left: 34px !important;
   background: transparent !important;
   box-shadow: none !important;
 }
-/* 白底就是这个胶囊本身，内缩 3px 压在金线下面 */
+/* 下层：金框 + 白底。金框是这一层的 border-image；白底是同一层的背景，只铺在内容区（padding = 外扩 + 3px），
+ * 即胶囊本身内缩 3px 压在金线下面。内容区圆角 = 外圆角 − padding，所以外圆角取「外扩 + S/2」，内侧正好是 S/2 − 3px。
+ * 金框必须在大星下面（原图里弧线被大星盖住），所以和大星分在两层。 */
 $SKIN [data-composer-card]::before {
   display: block;
-  inset: 3px;
+  top: calc(var(--dsh-cs) * -0.142);
+  right: calc(var(--dsh-cs) * -0.252);
+  bottom: calc(var(--dsh-cs) * -0.15);
+  left: calc(var(--dsh-cs) * -0.252);
   z-index: -1;
+  box-sizing: border-box;
   width: auto;
   height: auto;
+  padding: calc(var(--dsh-cs) * 0.142 + 3px) calc(var(--dsh-cs) * 0.252 + 3px) calc(var(--dsh-cs) * 0.15 + 3px);
   transform: none;
-  border-radius: 999px;
-  background: #ffffff;
-  filter: none;
+  border-radius: calc(var(--dsh-cs) * 0.752) / calc(var(--dsh-cs) * 0.642) calc(var(--dsh-cs) * 0.642) calc(var(--dsh-cs) * 0.65) calc(var(--dsh-cs) * 0.65);
+  background: #ffffff content-box;
+  filter: none; /* 不加外发光，保持线条锐利 */
   box-shadow: none;
+  border-image: var(--dsh-academy-composer-frame-src) 176 420 177 / calc(var(--dsh-cs) * 0.6423) calc(var(--dsh-cs) * 1.533) calc(var(--dsh-cs) * 0.646) stretch;
 }
 /* 获得焦点时撤掉原生的蓝色边框和光圈 */
 $SKIN [data-composer-card]:focus-within {
@@ -178,18 +192,28 @@ $SKIN [data-composer-card] button:focus-visible {
   outline-offset: 1px !important;
   border-radius: 8px;
 }
+/* 上层：两端大星（composerStarLeft / composerStarRight 配了才有），盖在金线上面，按竖直中心对齐 */
 $SKIN [data-composer-card]::after {
-  top: -14.2%;
-  right: calc(var(--dsh-ch) * -0.252);
-  bottom: -15%;
-  left: calc(var(--dsh-ch) * -0.252);
+  top: calc(var(--dsh-cs) * -0.142);
+  right: calc(var(--dsh-cs) * -0.252);
+  bottom: calc(var(--dsh-cs) * -0.15);
+  left: calc(var(--dsh-cs) * -0.252);
   width: auto;
   height: auto;
   transform: none;
-  background: none;
-  filter: none; /* 不加外发光，保持线条锐利 */
-  border-image: var(--dsh-academy-composer-frame-src) 177 420 / 50% calc(var(--dsh-ch) * 1.533) stretch;
+  background:
+    var(--dsh-composer-star-left, none) left center / calc(var(--dsh-cs) * 0.6204) calc(var(--dsh-cs) * 0.5839) no-repeat,
+    var(--dsh-composer-star-right, none) right center / calc(var(--dsh-cs) * 0.6204) calc(var(--dsh-cs) * 0.5839) no-repeat;
+  filter: none;
 }
+/* @end */
+
+/* @art composerStarLeft */
+$SKIN [data-composer-card] { --dsh-composer-star-left: var(--dsh-academy-composer-star-left-src); }
+/* @end */
+
+/* @art composerStarRight */
+$SKIN [data-composer-card] { --dsh-composer-star-right: var(--dsh-academy-composer-star-right-src); }
 /* @end */
 
 /* @art starLarge */

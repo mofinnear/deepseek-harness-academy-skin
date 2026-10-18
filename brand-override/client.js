@@ -592,8 +592,9 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The composer frame art is scaled to the composer's height so its end caps
-     * stay true semicircles; CSS cannot read an element's own height, so write it.
+     * The composer frame art is scaled to the composer's height (capped in
+     * skin-art.css) so its end caps stay true semicircles; CSS cannot read an
+     * element's own height, so write it.
      */
     function writeComposerHeight(card) {
       var height = Math.round(card.getBoundingClientRect().height);

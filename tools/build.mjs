@@ -33,7 +33,7 @@ const SKIN_ART_CSS = join(ROOT, 'brand-override', 'skin-art.css');
  * and switches on the `/* @art <key> *\/` section of skin-art.css. Nine-slice
  * frames must ship at source size because skin-art.css slices them in source px.
  */
-const ART_KEYS = ['panelFrame', 'panelFillMask', 'sidebarFrame', 'composerFrame', 'starLarge', 'starSparkles', 'sidebarProps', 'desk', 'deskBooks', 'deskGlobe', 'bubbleFrame', 'bubbleTail', 'sidebarLamp', 'hangingNotes'];
+const ART_KEYS = ['panelFrame', 'panelFillMask', 'sidebarFrame', 'composerFrame', 'composerStarLeft', 'composerStarRight', 'starLarge', 'starSparkles', 'sidebarProps', 'desk', 'deskBooks', 'deskGlobe', 'bubbleFrame', 'bubbleTail', 'sidebarLamp', 'hangingNotes'];
 const NINE_SLICE = new Set(['panelFrame', 'panelFillMask', 'sidebarFrame', 'composerFrame', 'bubbleFrame']);
 const kebab = (key) => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const MARKER = '/* __GENERATED_ARTWORK__ */';

@@ -102,7 +102,11 @@ if (themeCssMatch) {
     const varName = `--dsh-academy-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}-src`;
     record(`art ${key} is bundled and its section is active`, css.includes(`${varName}: url("data:image/`) && css.includes(`/* art: ${key} */`));
   }
-  record('composer frame scales with the composer height', source.includes('--dsh-composer-h') && source.includes('new ResizeObserver') && css.includes('calc(var(--dsh-ch) * 1.533)'));
+  record('composer frame scales with the composer height', source.includes('--dsh-composer-h') && source.includes('new ResizeObserver') && css.includes('calc(var(--dsh-cs) * 1.533)'));
+  /* 多行内容把输入框撑高时，花饰不能跟着放大到输入框那么高（会盖住上方工具栏）。 */
+  /* 插件页和自动化任务页都直接放在对话列里，白底金框画在对话列上。 */
+  record('plugin and automation pages get the white panel and gold frame', css.includes(':is([data-plugin-panel], [data-testid="task-manager-page"]))::after') && css.includes('[data-testid="task-manager-page"] { background: transparent !important; }'));
+  record('composer frame scale is capped for tall composers', /--dsh-cs: min\(var\(--dsh-ch\), \d+px\)/.test(css) && !/\[data-composer-card\][^{]*\{[^}]*border-radius: 999px/.test(css));
   record('nine-slice frames are not downscaled', ['panelFrame', 'sidebarFrame', 'composerFrame'].every((key) => !config.skin?.art?.[key]?.maxPx));
   record('frame ornaments leave room for header controls', !config.skin?.art?.panelFrame?.source || css.includes('header { padding-right: 46px !important; padding-left: 46px !important; }'));
   record('workspace surfaces allow the panorama to show through', /'--dsw-alias-bg-base': \{ light: '#[\da-f]{8}'/i.test(source));

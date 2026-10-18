@@ -115,7 +115,15 @@
         "maxPx": null
       },
       "composerFrame": {
-        "source": "assets/ui/composer-frame-v2.png",
+        "source": "assets/ui/composer-frame-v3.png",
+        "maxPx": null
+      },
+      "composerStarLeft": {
+        "source": "assets/ui/composer-star-left.png",
+        "maxPx": null
+      },
+      "composerStarRight": {
+        "source": "assets/ui/composer-star-right.png",
         "maxPx": null
       },
       "starLarge": {
