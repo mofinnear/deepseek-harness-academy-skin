@@ -1,6 +1,6 @@
 #!/bin/bash
 # 制作给别人的分享包（两个 zip）：
-#   星海书院皮肤-v<版本>.zip       安装包：已构建的插件 + 一键安装/卸载脚本 + 使用说明 + 预览图
+#   星海书院皮肤-v<版本>.zip       安装包：已构建的插件 + 一键安装/卸载脚本（共用 installer.mjs）+ 使用说明 + 预览图
 #   星海书院皮肤-v<版本>-源码.zip  源码：当前 git 提交（git archive，不含 backup/、构建产物和缓存）
 #   星海书院皮肤-v<版本>-代码审查.zip  只有代码和审查说明（docs/代码审查说明.md），给 AI 审查用
 # 用法：tools/package_share.sh <输出目录> [预览图目录]
@@ -32,7 +32,7 @@ PKG="$STAGE/$NAME"
 mkdir -p "$PKG/plugin/dsh-logo"
 cp brand-override/package.json brand-override/index.js "$PKG/plugin/dsh-logo/"
 cp -R brand-override/dist "$PKG/plugin/dsh-logo/"
-cp share/使用说明.md share/安装.command share/卸载.command share/安装-Windows.bat share/卸载-Windows.bat "$PKG/"
+cp share/使用说明.md share/安装.command share/卸载.command share/安装-Windows.bat share/卸载-Windows.bat share/installer.mjs "$PKG/"
 cp -R share/windows "$PKG/"
 cp LICENSE "$PKG/LICENSE.txt"   # .txt：Windows 上双击就能用记事本打开
 chmod +x "$PKG/安装.command" "$PKG/卸载.command"

@@ -9,10 +9,10 @@
 ## 快速安装
 
 - **只想用**：从 [GitHub Releases](https://github.com/mofinnear/deepseek-harness-academy-skin/releases/latest) 下载 `dsh-academy-skin-v<版本>.zip`（或别人发给你的同一个分享包），解压后双击 `安装.command`（macOS）或 `安装-Windows.bat`（Windows），再完全退出并重新打开 DeepSeek Harness。Windows 版按应用的 Windows 代码适配（右上角 40px 窗口按钮条让位、PowerShell 安装脚本），还没有在 Windows 实机验证。详细步骤、被系统拦截时的处理、手动安装和卸载见包里的 [`使用说明.md`](share/使用说明.md)。不需要 Node 或 Python。
-- **交给 DeepSeek Harness 安装**：把 `使用说明.md` 拖进对话框，权限切到「完全权限」，让它按说明里「给 AI 助手的安装步骤」安装——它会先备份 `~/.dsh/profiles/desktop` 里要改的两处，装完提醒你 `Cmd+Q` 重开，并告诉你快捷键（`Option+Shift+B` 会隐藏全部界面，再按一次恢复）。
+- **交给 DeepSeek Harness 安装**：把 `使用说明.md` 拖进对话框，权限切到「完全权限」，让它按说明里「给 AI 助手的安装步骤」安装——它会先备份 `~/.dsh/profiles/desktop` 里要改的文件，装完提醒你 `Cmd+Q` 重开，并告诉你快捷键（`Option+Shift+B` 会隐藏全部界面，再按一次恢复）。
 - **从源码安装**：需要 Node.js（构建时缩放素材还要 Python 3 + Pillow）。在项目目录运行 `node tools/install.mjs --apply`（会先构建），然后重启应用。卸载：`node tools/install.mjs --revert`。
 
-几种方式都只写用户目录里的两处：`~/.dsh/profiles/desktop/node_modules/@local/dsh-logo/`（插件文件）和 `~/.dsh/profiles/desktop/cordis.patch.yml`（追加一条加载项）；Windows 上 `~` 是 `%USERPROFILE%`。
+几种方式用的是同一份安装程序（`share/installer.mjs`，用 DeepSeek Harness 自带的 node 和 pnpm 运行），只改配置目录 `~/.dsh/profiles/desktop/` 里的东西：插件文件放在 `local-plugins/dsh-logo/`；用自带的 pnpm 把它登记成 `package.json` 里的 `link:` 依赖（`node_modules/@local/dsh-logo` 是 pnpm 建的链接），这样在插件页安装、卸载别的插件时 pnpm 不会把皮肤挪走；`cordis.patch.yml` 里追加一条加载项。Windows 上 `~` 是 `%USERPROFILE%`。
 
 ## 界面
 
@@ -44,6 +44,7 @@
 | `logo.config.json` | 素材路径、表情列表与气泡文案、包体上限 |
 | `assets/` | 皮肤用到的图片：背景、侧栏、边框（`ui/`）、陪伴栏书桌与人物层（`combo/`） |
 | `tools/build.mjs` / `verify.mjs` / `install.mjs` | 构建（素材内联进 `brand-override/dist/client.js`）、自检、安装 / 卸载 |
+| `share/installer.mjs` | 安装 / 卸载的具体步骤（`tools/install.mjs` 和分享包里的一键脚本都调用它）：插件放 `local-plugins/dsh-logo`，用应用自带的 pnpm 登记成 `link:` 依赖，加一条加载项 |
 | `tools/backup.mjs` | 改动前备份项目和已安装插件，可一键还原 |
 | `tools/devtools.mjs` | 连接调试端口：执行 JS、截图、实时注入 CSS |
 | `tools/composer_stars.py` | 把输入框边框拆成干净边框和两端大星（输入框变高时花饰不放大） |

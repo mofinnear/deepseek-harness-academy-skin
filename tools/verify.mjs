@@ -130,6 +130,11 @@ if (skinAssetsMatch) {
 
 /* 复制全文：列表型扩展位用自己的 id（不顶替「在 VS Code 中打开」），并且放在等文件读取服务的子插件里。 */
 record('file preview copy button registers its own id behind the file reader', source.includes("id: 'dsh-academy-copy-text'") && source.includes("ctx.inject(['slots', 'remote', 'remote.workspaceFiles']"));
+/* 安装交给 pnpm 管：插件不能再直接复制进 node_modules（插件页跑 pnpm 时会被挪进 .ignored）；三种安装方式共用 share/installer.mjs。 */
+const installer = readFileSync(join(ROOT, 'share', 'installer.mjs'), 'utf8');
+const oneClick = ['安装.command', '卸载.command', join('windows', 'install.ps1'), join('windows', 'uninstall.ps1')].map((name) => readFileSync(join(ROOT, 'share', name), 'utf8'));
+record('installs register the plugin with pnpm as a link: dependency', installer.includes("const LINK_SPEC = 'link:local-plugins/dsh-logo';") && installer.includes("pnpm(['add', `${PACKAGE_NAME}@${LINK_SPEC}`"));
+record('one-click scripts and tools/install.mjs all run share/installer.mjs', oneClick.every((text) => text.includes('installer.mjs')) && readFileSync(join(ROOT, 'tools', 'install.mjs'), 'utf8').includes("join(ROOT, 'share', 'installer.mjs')"));
 const registered = [...source.matchAll(/priority: SHADOW_PRIORITY/g)].length;
 record('all three slots register through the shadow priority', registered === 3, `found ${registered}`);
 
